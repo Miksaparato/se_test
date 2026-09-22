@@ -36,7 +36,7 @@ public class RecommendationService {
     private final ScoringEngine engine;
     private final ConfigService configService;
 
-    private final Map<Long, RecommendationDto> recommendations = new ConcurrentHashMap<>();
+    private final Map<String, RecommendationDto> recommendations = new ConcurrentHashMap<>();
     private final AtomicLong seq = new AtomicLong(1);
 
     public RecommendationService(WarehouseDataRepository repository,
@@ -69,11 +69,11 @@ public class RecommendationService {
         long id = seq.getAndIncrement();
         String recId = "REC-" + LocalDate.now().format(DATE_FMT) + "-" + String.format("%04d", id);
         RecommendationDto dto = new RecommendationDto(recId, SkuBrief.from(sku), top);
-        recommendations.put(id, dto);
+        recommendations.put(recId, dto);
         return dto;
     }
 
-    public RecommendationDto get(Long id) {
+    public RecommendationDto get(String id) {
         RecommendationDto dto = recommendations.get(id);
         if (dto == null) {
             throw new BizException(ErrorCode.NOT_FOUND, "推荐结果不存在: " + id);
@@ -81,7 +81,7 @@ public class RecommendationService {
         return dto;
     }
 
-    public AdoptResult adopt(Long id) {
+    public AdoptResult adopt(String id) {
         RecommendationDto dto = recommendations.get(id);
         if (dto == null) {
             throw new BizException(ErrorCode.NOT_FOUND, "推荐结果不存在: " + id);

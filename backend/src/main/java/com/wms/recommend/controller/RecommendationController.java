@@ -33,12 +33,12 @@ public class RecommendationController {
     }
 
     @GetMapping("/{id}")
-    public ApiResponse<RecommendationDto> get(@PathVariable Long id) {
+    public ApiResponse<RecommendationDto> get(@PathVariable String id) {
         return ApiResponse.ok(recommendationService.get(id));
     }
 
     @PostMapping("/{id}/adopt")
-    public ApiResponse<AdoptResult> adopt(@PathVariable Long id) {
+    public ApiResponse<AdoptResult> adopt(@PathVariable String id) {
         return ApiResponse.ok(recommendationService.adopt(id));
     }
 }
