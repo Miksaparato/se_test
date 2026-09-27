@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  工程级 Maven 配置（由 a / COM-1 提供）
+
+  用途：绕开本机 apache-maven-3.8.2/conf/settings.xml 中的两个问题：
+    1. localRepository 指向不存在的 .../apache-maven-3.8.2/repo（导致 .part.lock 写入失败）；
+    2. nexus-aliyun 镜像为 http 且当前网络不可达。
+  使用方式：mvn -s backend/maven-settings.xml ...
+  仓库目录 backend/.mvn-repo 已被 .gitignore 忽略，不进入版本库。
+-->
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 https://maven.apache.org/xsd/settings-1.0.0.xsd">
+
+  <localRepository>${user.dir}/.mvn-repo</localRepository>
+
+  <mirrors>
+    <mirror>
+      <id>maven-central</id>
+      <name>Maven Central (HTTPS)</name>
+      <url>https://repo.maven.apache.org/maven2</url>
+      <mirrorOf>*</mirrorOf>
+    </mirror>
+  </mirrors>
+
+  <profiles>
+    <profile>
+      <id>jdk17</id>
+      <activation>
+        <jdk>[17,)</jdk>
+      </activation>
+      <properties>
+        <maven.compiler.release>17</maven.compiler.release>
+      </properties>
+    </profile>
+  </profiles>
+
+</settings>
