@@ -57,26 +57,31 @@ class SecurityE2eTest {
 
     /**
      * 启动真实应用（随机端口、H2 内存库、探针 Controller）。
+     *
+     * <p><b>为什么用 {@code run("--key=value")} 而不是 {@code .properties(...)}</b>：
+     * {@code SpringApplicationBuilder.properties()} 设置的是**默认属性**，优先级最低，
+     * 会被 {@code application.yml} 里的同名配置覆盖——也就是说这些用例会连到
+     * `application.yml` 指向的真实库 {@code wms_sim}，既污染开发数据，也失去了
+     * 「用 H2 占位、不依赖 MySQL」的本意。命令行参数优先级最高，才能确保生效。
      */
     @BeforeAll
     static void startApplication() {
         context = new SpringApplicationBuilder(WmsApplication.class, ProbeController.class)
                 .web(WebApplicationType.SERVLET)
-                .properties(
-                        "server.port=0",
-                        "wms.security.jwt-secret=" + SECRET,
-                        "wms.security.token-expire-seconds=3600",
+                .run(
+                        "--server.port=0",
+                        "--wms.security.jwt-secret=" + SECRET,
+                        "--wms.security.token-expire-seconds=3600",
                         // 本测试只验证鉴权链路，不依赖真实 MySQL：用 H2 占位并关闭 Flyway
-                        "spring.datasource.url=jdbc:h2:mem:wms_e2e;MODE=MySQL;DB_CLOSE_DELAY=-1",
-                        "spring.datasource.driver-class-name=org.h2.Driver",
-                        "spring.datasource.username=sa",
-                        "spring.datasource.password=",
-                        "spring.flyway.enabled=false",
-                        "spring.mvc.throw-exception-if-no-handler-found=true",
-                        "spring.web.resources.add-mappings=false",
-                        "mybatis-plus.configuration.log-impl=org.apache.ibatis.logging.nologging.NoLoggingImpl",
-                        "logging.level.root=WARN")
-                .run();
+                        "--spring.datasource.url=jdbc:h2:mem:wms_e2e;MODE=MySQL;DB_CLOSE_DELAY=-1",
+                        "--spring.datasource.driver-class-name=org.h2.Driver",
+                        "--spring.datasource.username=sa",
+                        "--spring.datasource.password=",
+                        "--spring.flyway.enabled=false",
+                        "--spring.mvc.throw-exception-if-no-handler-found=true",
+                        "--spring.web.resources.add-mappings=false",
+                        "--mybatis-plus.configuration.log-impl=org.apache.ibatis.logging.nologging.NoLoggingImpl",
+                        "--logging.level.root=WARN");
 
         int port = context.getEnvironment().getProperty("local.server.port", Integer.class, 8080);
         baseUrl = "http://127.0.0.1:" + port;
