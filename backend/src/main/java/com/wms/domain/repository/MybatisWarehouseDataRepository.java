@@ -235,6 +235,25 @@ public class MybatisWarehouseDataRepository implements WarehouseDataRepository {
         return plan;
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean deletePlan(Long planId) {
+        return planId != null && planMapper.deleteById(planId) > 0;
+    }
+
+    @Override
+    public Optional<String> findMaxPlanNo(String prefix) {
+        if (prefix == null || prefix.isBlank()) {
+            return Optional.empty();
+        }
+        Plan latest = planMapper.selectOne(Wrappers.<Plan>lambdaQuery()
+                .select(Plan::getPlanNo)
+                .likeRight(Plan::getPlanNo, prefix)
+                .orderByDesc(Plan::getPlanNo)
+                .last("LIMIT 1"));
+        return latest == null ? Optional.empty() : Optional.ofNullable(latest.getPlanNo());
+    }
+
     /**
      * 批量派生库位的分区品类：货架巷道 → 品类（可配置映射）。
      *

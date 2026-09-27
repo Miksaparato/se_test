@@ -45,9 +45,13 @@ public class ScoringEngine {
         weights.validate();
         rules.validate();
 
-        // 1. 硬约束过滤：重货禁止分配到超过预设层高（算法 5.4）
+        // 1. 硬约束过滤（《需求文档》4.4）：
+        //    a) 重货禁止分配到超过预设层高（算法 5.4）；
+        //    b) 货物尺寸不得超出库位容量——与 c 的约束校验模块共用 SkuSize.fitsWithin，
+        //       否则会出现「推荐得出来、仿真判为不可用」的口径分裂。
         List<Location> eligible = freeLocations.stream()
                 .filter(l -> rules.allowsHeavyOnLayer(sku.weightValue(), l.getLayer()))
+                .filter(l -> !capacityExceeded(sku, l))
                 .toList();
 
         // 2. 构建评分上下文（计算 min/max 距离、最大层号等共享量）
@@ -84,6 +88,17 @@ public class ScoringEngine {
             case "other" -> weights.getOther();
             default -> 0.0;
         };
+    }
+
+    /**
+     * 容量硬约束：货物体积超过库位容量时该库位不可用。
+     *
+     * @param sku      待入库货物
+     * @param location 候选库位
+     * @return 超出容量返回 true
+     */
+    private static boolean capacityExceeded(Sku sku, Location location) {
+        return sku.getSize() != null && !sku.getSize().fitsWithin(location.getCapacity());
     }
 
     private static double round(double v) {

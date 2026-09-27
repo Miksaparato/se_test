@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    订单 Mapper 的自定义 SQL（《代码规范》4.4：复杂 SQL 统一写 XML，禁止在业务代码里拼字符串）。
+
+    负责人：a（提供给 c 的 API-062 随机订单集批量落库使用）
+-->
+<mapper namespace="com.wms.domain.mapper.OrderMapper">
+
+    <!--
+        批量插入订单：随机订单集一次可能生成几十上百条，逐条 insert 会带来 N 次往返
+        （《代码规范》4.4「批量写用 saveBatch」）。主键回填由 useGeneratedKeys 完成。
+    -->
+    <insert id="insertBatch" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO `orders`
+        (`order_no`, `sku_id`, `quantity`, `priority`, `placed_at`, `status`, `remark`)
+        VALUES
+        <foreach collection="orders" item="item" separator=",">
+            (#{item.orderNo}, #{item.skuId}, #{item.quantity}, #{item.priority},
+             #{item.placedAt}, #{item.status}, #{item.remark})
+        </foreach>
+    </insert>
+
+</mapper>

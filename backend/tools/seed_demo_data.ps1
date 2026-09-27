@@ -14,6 +14,11 @@
     分区约定与 backend/src/main/resources/application.yml 的 wms.zone.aisle-category 对应：
     巷道 A → 电子，B → 食品，C → 机械。
 
+    库位容量：库位容量与 SKU 尺寸同为**体积口径**，单位必须一致，否则
+    「尺寸不得超出库位容量」（《需求文档》4.4 约束三）会把所有库位判为放不下
+    （schema 的默认容量是 100，而演示 SKU 体积是 6000~72000）。
+    因此本脚本按 -LocationCapacity（默认 100000）建库位，并把容量过小的既有库位纠正过来。
+
 .PARAMETER BaseUrl
     后端地址，默认 http://127.0.0.1:8080
 
@@ -22,6 +27,9 @@
 
 .PARAMETER Password
     登录密码，默认 admin123（V3 种子脚本中的初始密码）。
+
+.PARAMETER LocationCapacity
+    库位容量（体积口径），默认 100000，需大于演示 SKU 的最大体积 72000。
 
 .NOTES
     本脚本含中文，且**以 UTF-8 with BOM 保存**：Windows PowerShell 5.1 读取无 BOM 的 .ps1 时
@@ -35,7 +43,8 @@
 param(
     [string]$BaseUrl = 'http://127.0.0.1:8080',
     [string]$Account = 'admin',
-    [string]$Password = 'admin123'
+    [string]$Password = 'admin123',
+    [double]$LocationCapacity = 100000
 )
 
 $ErrorActionPreference = 'Stop'
@@ -171,12 +180,22 @@ foreach ($r in $rackSeed) {
     $payload['warehouseId'] = $warehouseId
     $payload['orientation'] = 'row'
     $payload['generateLocations'] = $true
+    $payload['capacity'] = $LocationCapacity
     $created = Get-Data (Invoke-Api -Method Post -Path '/racks' -Body $payload) "创建货架 $($r.code)"
     Write-Host "   + 货架 $($r.code)（巷道 $($r.aisle)）-> id=$($created.id)"
 }
 
+# 纠正容量过小的既有库位：容量与 SKU 尺寸同为体积口径，容量太小时容量校验会过滤掉全部库位
 $locations = Get-Data (Invoke-Api -Method Get -Path "/locations?warehouse_id=$warehouseId&page=1&page_size=100") '查询库位'
-Write-Host "   库位总数：$($locations.total)"
+$tooSmall = @($locations.list | Where-Object { [double]$_.capacity -lt $LocationCapacity })
+if ($tooSmall.Count -gt 0) {
+    foreach ($loc in $tooSmall) {
+        Invoke-Api -Method Put -Path "/locations/$($loc.id)" -Body @{ capacity = $LocationCapacity } | Out-Null
+    }
+    Write-Host "   ~ 已把 $($tooSmall.Count) 个库位的容量修正为 $LocationCapacity"
+    $locations = Get-Data (Invoke-Api -Method Get -Path "/locations?warehouse_id=$warehouseId&page=1&page_size=100") '查询库位'
+}
+Write-Host "   库位总数：$($locations.total)，容量：$LocationCapacity"
 
 # ---------------------------------------------------------------- 4. 订单（API-034）
 Write-Host '== 出库订单' -ForegroundColor Cyan

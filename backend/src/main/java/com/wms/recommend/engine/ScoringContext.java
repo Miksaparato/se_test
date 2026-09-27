@@ -2,6 +2,7 @@ package com.wms.recommend.engine;
 
 import com.wms.domain.entity.Location;
 import com.wms.domain.entity.Warehouse;
+import com.wms.simulation.distance.DistanceUtil;
 
 import java.util.List;
 import java.util.Map;
@@ -41,9 +42,9 @@ public class ScoringContext {
         this.maxDistance = candidates.isEmpty() ? 0 : dmax;
     }
 
-    /** 曼哈顿距离（COM-6 约定口径）：|x1-x2| + |y1-y2|。 */
+    /** 曼哈顿距离：统一走 c 的 {@link com.wms.simulation.distance.DistanceUtil}（COM-6 冻结口径）。 */
     public double distance(int x, int y) {
-        return Math.abs(x - exitX) + Math.abs(y - exitY);
+        return DistanceUtil.manhattan(x, y, exitX, exitY);
     }
 
     /** 就近度：归一化到 [0,1]，1 表示离出库口最近。 */

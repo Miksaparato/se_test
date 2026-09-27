@@ -149,4 +149,26 @@ public interface WarehouseDataRepository {
      * @return 落库/登记后的方案（含主键）
      */
     Plan savePlan(Plan plan);
+
+    /**
+     * 删除分配方案（c 的「清空重置」用，见 API-057）。
+     *
+     * <p>只删除仿真产出的方案快照，不触碰基础数据（库位/货物/订单）。
+     *
+     * @param planId 方案 id
+     * @return 删除成功返回 true，方案不存在返回 false
+     */
+    boolean deletePlan(Long planId);
+
+    /**
+     * 查询指定前缀下最大的方案编号，供 c 生成不重复的 {@code plan_no}。
+     *
+     * <p>为什么必须有它：{@code plans.plan_no} 有唯一键 {@code uk_plans_plan_no}，
+     * 若编号只靠进程内的自增计数器，应用一重启序号就从 1 重新开始，
+     * 紧接着的第一次入库仿真必然撞唯一键（表现为 50001 数据库操作异常）。
+     *
+     * @param prefix 编号前缀，如 {@code PLAN-20260927-}
+     * @return 最大编号；该前缀下无方案时为空
+     */
+    java.util.Optional<String> findMaxPlanNo(String prefix);
 }

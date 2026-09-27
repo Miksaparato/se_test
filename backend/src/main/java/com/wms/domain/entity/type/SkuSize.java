@@ -38,4 +38,25 @@ public record SkuSize(
         }
         return length * width * height;
     }
+
+    /**
+     * 判断该尺寸能否放进指定容量的库位（《需求文档》4.4 约束三：尺寸不得超出库位容量）。
+     *
+     * <p><b>口径</b>：{@code locations.capacity} 与 {@code skus.size} 同为**体积口径**，
+     * 单位由使用方统一（本工程演示数据用立方厘米）。未录入尺寸（任一维为空）或库位未设容量时
+     * 视为无该约束，返回 true——与《数据库设计说明书》5.2「若录入尺寸，则校验」一致。
+     *
+     * <p>本方法由 b 的推荐引擎与 c 的约束校验共用，避免两处各写一份导致
+     * 「推荐出来的库位被仿真判为不可用」。
+     *
+     * @param capacity 库位容量，可为 null
+     * @return 放得下返回 true
+     */
+    public boolean fitsWithin(java.math.BigDecimal capacity) {
+        int volume = volume();
+        if (volume <= 0 || capacity == null) {
+            return true;
+        }
+        return capacity.doubleValue() >= volume;
+    }
 }

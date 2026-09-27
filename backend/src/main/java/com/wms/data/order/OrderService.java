@@ -194,6 +194,137 @@ public class OrderService {
         return orderMapper.selectOne(Wrappers.<Order>lambdaQuery().eq(Order::getOrderNo, orderNo.trim()));
     }
 
+    // ------------------------------------------------------------------
+    // 以下三个方法由 c 的仿真模块消费（《代码规范》10.3：跨模块只通过公开 Service 调用）
+    // ------------------------------------------------------------------
+
+    /**
+     * 查询参与出库仿真的待出库订单，按「优先级降序 + 下达时间升序」排序（FR-4.1）。
+     *
+     * <p>排序主路径命中索引 {@code idx_orders_status_priority_placed}（《数据库设计说明书》5.3）。
+     *
+     * @return 待出库订单列表
+     */
+    public List<Order> listPendingForSimulation() {
+        return orderMapper.selectList(Wrappers.<Order>lambdaQuery()
+                .eq(Order::getStatus, STATUS_PENDING)
+                .orderByDesc(Order::getPriority)
+                .orderByAsc(Order::getPlacedAt)
+                .orderByAsc(Order::getId));
+    }
+
+    /**
+     * 按 id 批量查询订单（出库仿真指定 orderIds 时使用）。
+     *
+     * <p>用 {@code selectBatchIds} 一次取齐，避免循环单条查询（《代码规范》4.4）。
+     *
+     * @param orderIds 订单 id 列表
+     * @return 订单列表；入参为空时返回空列表
+     */
+    public List<Order> listByIds(List<Long> orderIds) {
+        if (orderIds == null || orderIds.isEmpty()) {
+            return List.of();
+        }
+        return orderMapper.selectBatchIds(orderIds.stream().filter(java.util.Objects::nonNull).distinct().toList());
+    }
+
+    /**
+     * 批量创建订单（供 c 的 API-062「随机测试订单集生成」使用，C-B8）。
+     *
+     * <p>与单条创建相比做了两处优化：
+     * <ul>
+     *   <li>skuId 存在性用一次批量查询校验，不在循环里查库；</li>
+     *   <li>用 {@code insertBatch} 一条 SQL 写入全部订单（SQL 见 {@code mapper/OrderMapper.xml}）。</li>
+     * </ul>
+     * 未显式给订单号的条目按 {@code SO-yyyyMMdd-序号} 连续编号，序号自当前最大值递增。
+     *
+     * @param requests 创建请求列表
+     * @return 新建订单视图对象列表（顺序与入参一致，含回填的主键）
+     * @throws BizException 货物不存在（40405）或订单号重复（42209）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public List<OrderVO> createOrders(List<CreateOrderRequest> requests) {
+        if (requests == null || requests.isEmpty()) {
+            return List.of();
+        }
+        List<Long> skuIds = requests.stream()
+                .map(CreateOrderRequest::skuId)
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .toList();
+        Map<Long, String> skuCodes = skuService.loadCodesByIds(skuIds);
+        for (Long skuId : skuIds) {
+            if (!skuCodes.containsKey(skuId)) {
+                throw new BizException(ErrorCode.SKU_NOT_FOUND, "货物不存在: " + skuId);
+            }
+        }
+
+        String prefix = "SO-" + LocalDate.now().format(ORDER_NO_DATE) + "-";
+        int sequence = nextSequence(prefix);
+
+        // 显式指定的订单号一次性批量查重（不在循环里逐条查库，《代码规范》4.4）
+        List<String> explicitNos = requests.stream()
+                .map(CreateOrderRequest::orderNo)
+                .filter(StringUtils::hasText)
+                .map(String::trim)
+                .distinct()
+                .toList();
+        if (!explicitNos.isEmpty()) {
+            List<Order> duplicated = orderMapper.selectList(Wrappers.<Order>lambdaQuery()
+                    .in(Order::getOrderNo, explicitNos));
+            if (!duplicated.isEmpty()) {
+                throw new BizException(ErrorCode.ORDER_NO_DUPLICATE,
+                        "订单号已存在: " + duplicated.get(0).getOrderNo());
+            }
+        }
+
+        List<Order> entities = new java.util.ArrayList<>(requests.size());
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        for (CreateOrderRequest request : requests) {
+            String orderNo = StringUtils.hasText(request.orderNo())
+                    ? request.orderNo().trim()
+                    : prefix + String.format("%03d", sequence++);
+            if (!seen.add(orderNo)) {
+                throw new BizException(ErrorCode.ORDER_NO_DUPLICATE, "请求内订单号重复: " + orderNo);
+            }
+            Order entity = new Order();
+            entity.setOrderNo(orderNo);
+            entity.setSkuId(request.skuId());
+            entity.setQuantity(request.quantity());
+            entity.setPriority(request.priority());
+            entity.setPlacedAt(request.placedAt() == null ? LocalDateTime.now() : request.placedAt());
+            entity.setStatus(StringUtils.hasText(request.status()) ? request.status() : STATUS_PENDING);
+            entity.setRemark(request.remark());
+            entities.add(entity);
+        }
+        orderMapper.insertBatch(entities);
+        log.info("批量创建订单成功 数量={} 首个订单号={}", entities.size(), entities.get(0).getOrderNo());
+        return entities.stream()
+                .map(entity -> OrderVO.from(entity, skuCodes.get(entity.getSkuId())))
+                .toList();
+    }
+
+    /**
+     * 计算下一个可用序号：该前缀下最大序号 + 1。
+     *
+     * @param prefix 订单号前缀，如 {@code SO-20260910-}
+     * @return 下一个序号
+     */
+    private int nextSequence(String prefix) {
+        Order latest = orderMapper.selectOne(Wrappers.<Order>lambdaQuery()
+                .likeRight(Order::getOrderNo, prefix)
+                .orderByDesc(Order::getOrderNo)
+                .last("LIMIT 1"));
+        if (latest == null) {
+            return 1;
+        }
+        try {
+            return Integer.parseInt(latest.getOrderNo().substring(prefix.length())) + 1;
+        } catch (NumberFormatException ignored) {
+            return 1;
+        }
+    }
+
     /**
      * 按 id 查询订单，不存在时抛 40406。
      *

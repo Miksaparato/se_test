@@ -237,4 +237,32 @@ public class InMemoryWarehouseDataRepository implements WarehouseDataRepository 
         plans.put(plan.getId(), plan);
         return plan;
     }
+
+    /**
+     * 删除内存方案（MySQL 模式由 {@code PlanMapper} 落库）。
+     *
+     * @param planId 方案 id
+     * @return 删除成功返回 true
+     */
+    @Override
+    public boolean deletePlan(Long planId) {
+        return planId != null && plans.remove(planId) != null;
+    }
+
+    /**
+     * 查询内存中指定前缀下最大的方案编号。
+     *
+     * @param prefix 编号前缀
+     * @return 最大编号
+     */
+    @Override
+    public Optional<String> findMaxPlanNo(String prefix) {
+        if (prefix == null || prefix.isBlank()) {
+            return Optional.empty();
+        }
+        return plans.values().stream()
+                .map(Plan::getPlanNo)
+                .filter(no -> no != null && no.startsWith(prefix))
+                .max(Comparator.naturalOrder());
+    }
 }
