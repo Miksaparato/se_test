@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import * as echarts from 'echarts'
-import { comparePlans, exportReportUrl, listPlans } from '@/api/compare'
+import { comparePlans, exportReport, listPlans } from '@/api/compare'
 import type { CompareResult, Plan, PlanMetric } from '@/types'
 
 const plans = ref<Plan[]>([])
@@ -94,6 +94,24 @@ function renderChart(metrics: PlanMetric[]) {
 function fmt(n: number): string {
   return n.toFixed(1)
 }
+
+/**
+ * 导出方案报告（API-053）。
+ *
+ * 报告接口需要 `Authorization: Bearer <token>`，因此不能直接用 `<a href>` 下载，
+ * 必须走统一封装的 `download()`（带鉴权头 + blob 保存）。
+ *
+ * @param id 方案 id
+ * @param format 导出格式（md / csv）
+ */
+async function onExport(id: number, format: 'md' | 'csv'): Promise<void> {
+  error.value = ''
+  try {
+    await exportReport(id, format)
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : String(e)
+  }
+}
 </script>
 
 <template>
@@ -125,9 +143,8 @@ function fmt(n: number): string {
             <td>{{ fmt(p.hotAvgDistance) }}</td>
             <td>{{ p.violations }}</td>
             <td>
-              <a :href="exportReportUrl(p.id, 'md')" download>MD</a>
-              <span class="muted"> / </span>
-              <a :href="exportReportUrl(p.id, 'csv')" download>CSV</a>
+              <button @click="onExport(p.id, 'md')">MD</button>
+              <button @click="onExport(p.id, 'csv')">CSV</button>
             </td>
           </tr>
         </tbody>

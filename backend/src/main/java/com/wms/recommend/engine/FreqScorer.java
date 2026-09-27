@@ -19,7 +19,7 @@ public class FreqScorer implements Scorer {
 
     @Override
     public double score(Sku sku, Location location, ScoringContext ctx) {
-        double turnoverNorm = clamp(sku.getTurnoverRate() / ctx.getRules().getMaxTurnover());
+        double turnoverNorm = clamp(sku.turnoverRateValue() / ctx.getRules().getMaxTurnover());
         double proximity = ctx.proximity(location.getX(), location.getY());
         return turnoverNorm * proximity;
     }

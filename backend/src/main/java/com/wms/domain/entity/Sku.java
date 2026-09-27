@@ -1,41 +1,5 @@
 package com.wms.domain.entity;
 
-/**
- * 货物（SKU）——对应《接口文档》API-030 冻结字段（COM-2，成员 a 牵头定稿）。
- * 其中 weight / turnoverRate / priority 是推荐引擎（b）与仿真引擎（c）的核心输入。
- */
-public class Sku {
-
-    private Long id;
-    private String skuCode;
-    private String name;
-    /** 重量（kg），重货倾向低层。 */
-    private double weight;
-    /** 周转频次，归一化到 [0,1]，越高越频繁。 */
-    private double turnoverRate;
-    /** 出库优先级，1~5，越高越优先。 */
-    private int priority;
-    /** 品类，用于「其他」分项中的品类匹配。 */
-    private String category;
-    /** 尺寸（长/宽/高，cm），本期预留容量校验。 */
-    private double length;
-    private double width;
-    private double height;
-
-    public Sku() {
-    }
-
-    public Sku(Long id, String skuCode, String name, double weight,
-               double turnoverRate, int priority, String category) {
-        this.id = id;
-        this.skuCode = skuCode;
-        this.name = name;
-        this.weight = weight;
-        this.turnoverRate = turnoverRate;
-        this.priority = priority;
-        this.category = category;
-    }
-
 import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
@@ -116,14 +80,6 @@ public class Sku {
         this.id = id;
     }
 
-    public String getSkuCode() {
-        return skuCode;
-    }
-
-    public void setSkuCode(String skuCode) {
-        this.skuCode = skuCode;
-    }
-
     /**
      * 获取SKU 编码，全局唯一，如 SKU-001。
      *
@@ -143,6 +99,48 @@ public class Sku {
     }
 
     /**
+     * 获取 SKU 编码的**接口契约别名**。
+     *
+     * <p>数据库列为 {@code code}，而《接口文档》API-030/041 的 JSON 字段名为 {@code skuCode}
+     * （见《数据库设计说明书》2.4 给 b、c 的冻结契约第 1 条）。为免各处手工改名，
+     * 实体提供该只读别名，VO/DTO 直接取用。
+     *
+     * @return SKU 编码，等价于 {@link #getCode()}
+     */
+    public String getSkuCode() {
+        return code;
+    }
+
+    /**
+     * 重量（double 视图），供评分/仿真算法直接参与算术运算。
+     *
+     * <p>存储与比较仍以 {@link #getWeight()} 的 {@code BigDecimal} 为准（《数据库设计说明书》2.4 第 4 条）。
+     *
+     * @return 重量(kg)，空值按 0 处理
+     */
+    public double weightValue() {
+        return weight == null ? 0.0 : weight.doubleValue();
+    }
+
+    /**
+     * 周转频次（double 视图），供评分/仿真算法直接参与算术运算。
+     *
+     * @return 周转频次，空值按 0 处理
+     */
+    public double turnoverRateValue() {
+        return turnoverRate == null ? 0.0 : turnoverRate.doubleValue();
+    }
+
+    /**
+     * 出库优先级（int 视图），空值按 1 处理。
+     *
+     * @return 出库优先级 1~5
+     */
+    public int priorityValue() {
+        return priority == null ? 1 : priority;
+    }
+
+    /**
      * 获取货物名称。
      *
      * @return 货物名称
@@ -150,7 +148,6 @@ public class Sku {
     public String getName() {
         return name;
     }
-
     /**
      * 设置货物名称。
      *
@@ -158,30 +155,6 @@ public class Sku {
      */
     public void setName(String name) {
         this.name = name;
-    }
-
-    public double getWeight() {
-        return weight;
-    }
-
-    public void setWeight(double weight) {
-        this.weight = weight;
-    }
-
-    public double getTurnoverRate() {
-        return turnoverRate;
-    }
-
-    public void setTurnoverRate(double turnoverRate) {
-        this.turnoverRate = turnoverRate;
-    }
-
-    public int getPriority() {
-        return priority;
-    }
-
-    public void setPriority(int priority) {
-        this.priority = priority;
     }
 
     /**
@@ -256,29 +229,6 @@ public class Sku {
         this.category = category;
     }
 
-    public double getLength() {
-        return length;
-    }
-
-    public void setLength(double length) {
-        this.length = length;
-    }
-
-    public double getWidth() {
-        return width;
-    }
-
-    public void setWidth(double width) {
-        this.width = width;
-    }
-
-    public double getHeight() {
-        return height;
-    }
-
-    public void setHeight(double height) {
-        this.height = height;
-    }
     /**
      * 获取尺寸（JSON 列）。
      *
@@ -349,6 +299,32 @@ public class Sku {
      */
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    /**
+     * 便捷构造：用于单元测试与演示数据。
+     *
+     * @param id          主键
+     * @param skuCode     SKU 编码
+     * @param name        货物名称
+     * @param weight      重量(kg)
+     * @param turnoverRate 周转频次
+     * @param priority    出库优先级 1~5
+     * @param category    品类
+     */
+    public Sku(Long id, String skuCode, String name, double weight,
+               double turnoverRate, int priority, String category) {
+        this.id = id;
+        this.code = skuCode;
+        this.name = name;
+        this.weight = BigDecimal.valueOf(weight);
+        this.turnoverRate = BigDecimal.valueOf(turnoverRate);
+        this.priority = priority;
+        this.category = category;
+    }
+
+    /** MyBatis-Plus 反射实例化所需的无参构造。 */
+    public Sku() {
     }
 
 }

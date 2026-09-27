@@ -1,26 +1,5 @@
 package com.wms.domain.entity;
 
-/**
- * 仓库——对应《接口文档》API-021 冻结字段。
- * 出库口坐标 (exitX, exitY) 是距离/路程计算的原点（COM-6，曼哈顿距离，成员 c 牵头）。
- */
-public class Warehouse {
-
-    private Long id;
-    private String name;
-    private int exitX;
-    private int exitY;
-
-    public Warehouse() {
-    }
-
-    public Warehouse(Long id, String name, int exitX, int exitY) {
-        this.id = id;
-        this.name = name;
-        this.exitX = exitX;
-        this.exitY = exitY;
-    }
-
 import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
@@ -133,21 +112,6 @@ public class Warehouse {
         this.name = name;
     }
 
-    public int getExitX() {
-        return exitX;
-    }
-
-    public void setExitX(int exitX) {
-        this.exitX = exitX;
-    }
-
-    public int getExitY() {
-        return exitY;
-    }
-
-    public void setExitY(int exitY) {
-        this.exitY = exitY;
-    }
     /**
      * 获取仓库长（米/格），FR-1.1。
      *
@@ -308,6 +272,25 @@ public class Warehouse {
      */
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    /**
+     * 便捷构造：用于单元测试与演示数据（不含 code 等非空列，仅供内存场景使用）。
+     *
+     * @param id    主键
+     * @param name  仓库名称
+     * @param exitX 出库口坐标 x
+     * @param exitY 出库口坐标 y
+     */
+    public Warehouse(Long id, String name, int exitX, int exitY) {
+        this.id = id;
+        this.name = name;
+        this.exitX = exitX;
+        this.exitY = exitY;
+    }
+
+    /** MyBatis-Plus 反射实例化所需的无参构造。 */
+    public Warehouse() {
     }
 
 }

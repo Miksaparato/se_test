@@ -49,7 +49,7 @@ public class InMemoryWarehouseDataRepository implements WarehouseDataRepository 
                     } else if (x >= 6 && col % 2 == 1) {
                         l.setCategory("食品");
                     }
-                    l.setCapacity(100);
+                    l.setCapacity(java.math.BigDecimal.valueOf(100));
                     // 约 1/3 预置为占用，用于演示空位连续性与空闲池
                     if ((id % 3) == 0) {
                         l.setStatus("occupied");

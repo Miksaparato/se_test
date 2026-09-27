@@ -120,9 +120,9 @@ function handleSearch(): void {
 /**
  * 仓库切换：刷新货架选项并重置货架过滤。
  *
- * @param value 仓库 id
+ * 参数由 el-select 的 @change 传入，业务上只需触发刷新，故不参与计算。
  */
-async function handleWarehouseChange(value: number): Promise<void> {
+async function handleWarehouseChange(): Promise<void> {
   query.rackId = undefined
   await loadRackOptions()
   void load()

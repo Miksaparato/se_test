@@ -1,22 +1,5 @@
 package com.wms.common;
 
-/**
- * 业务错误码枚举（对应《代码规范》4.2 错误码段）。
- * 错误码千位即 HTTP 状态码：400/401/403/404/422/500。
- */
-public enum ErrorCode {
-
-    PARAM_INVALID(40001, "参数校验失败"),
-    WEIGHT_SUM_INVALID(40002, "权重之和必须为 1"),
-    UNAUTHORIZED(40101, "Token 失效"),
-    FORBIDDEN(40301, "无该操作权限"),
-    NOT_FOUND(40401, "资源不存在"),
-    LOCATION_OCCUPIED(42201, "库位已占用"),
-    WEIGHT_LAYER_VIOLATION(42202, "重货层高违规"),
-    NO_FREE_LOCATION(42203, "仓库暂无空闲库位"),
-    NO_ELIGIBLE_LOCATION(42204, "无满足约束的库位"),
-    EMPTY_RECOMMENDATION(42205, "推荐结果为空"),
-    SYSTEM_ERROR(50001, "系统异常");
 import org.springframework.http.HttpStatus;
 
 /**
@@ -121,13 +104,24 @@ public enum ErrorCode {
     SELF_OPERATION_FORBIDDEN(42215, "不允许对当前登录账号执行该操作"),
     /** 系统保留账号不允许删除。 */
     RESERVED_ACCOUNT_NOT_DELETABLE(42216, "系统保留账号不允许删除"),
+    /** 仓库暂无空闲库位（推荐引擎 B-B1）。 */
+    NO_FREE_LOCATION(42217, "仓库暂无空闲库位"),
+    /** 无满足硬约束的库位（重货层高规则过滤后候选为空，B-B1 / C-B7）。 */
+    NO_ELIGIBLE_LOCATION(42218, "无满足约束的库位"),
+    /** 推荐结果为空，无法采用（B-B1）。 */
+    EMPTY_RECOMMENDATION(42219, "推荐结果为空"),
+    /** 仿真过程中已无可用库位（C-B3）。 */
+    SIM_NO_AVAILABLE_LOCATION(42220, "仿真过程中已无可用库位"),
+    /** 出库仿真：订单货物当前不在任何库位（C-B4）。 */
+    SKU_NOT_STORED(42221, "订单货物当前不在任何库位，无法出库"),
+    /** 出库仿真：订单列表中无待出库订单（C-B4）。 */
+    NO_PENDING_ORDER(42222, "没有可参与出库仿真的订单"),
 
     // ---------- 500 系统异常 ----------
     /** 数据库操作异常。 */
     DATABASE_ERROR(50001, "数据库操作异常"),
     /** 系统内部异常。 */
     SYSTEM_ERROR(50002, "系统异常，请稍后重试");
-
     private final int code;
     private final String message;
 
@@ -145,9 +139,6 @@ public enum ErrorCode {
         return code;
     }
 
-    public String getMessage() {
-        return message;
-    }
     /**
      * 获取默认错误提示。
      *

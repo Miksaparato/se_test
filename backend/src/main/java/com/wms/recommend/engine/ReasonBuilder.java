@@ -17,9 +17,9 @@ public final class ReasonBuilder {
 
     public static String build(Sku sku, Location loc, ScoringContext ctx, Map<String, Double> raw) {
         List<String> terms = new ArrayList<>();
-        double weightNorm = clamp(sku.getWeight() / ctx.getRules().getMaxWeightNorm());
-        double turnoverNorm = clamp(sku.getTurnoverRate() / ctx.getRules().getMaxTurnover());
-        double priorityNorm = clamp(sku.getPriority() / (double) ctx.getRules().getMaxPriority());
+        double weightNorm = clamp(sku.weightValue() / ctx.getRules().getMaxWeightNorm());
+        double turnoverNorm = clamp(sku.turnoverRateValue() / ctx.getRules().getMaxTurnover());
+        double priorityNorm = clamp(sku.priorityValue() / (double) ctx.getRules().getMaxPriority());
         double proximity = ctx.proximity(loc.getX(), loc.getY());
 
         if (weightNorm >= 0.5 && loc.getLayer() <= ctx.getRules().getMaxLayerForHeavy()) {

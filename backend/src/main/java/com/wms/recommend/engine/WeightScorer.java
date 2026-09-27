@@ -19,7 +19,7 @@ public class WeightScorer implements Scorer {
 
     @Override
     public double score(Sku sku, Location location, ScoringContext ctx) {
-        double weightNorm = clamp(sku.getWeight() / ctx.getRules().getMaxWeightNorm());
+        double weightNorm = clamp(sku.weightValue() / ctx.getRules().getMaxWeightNorm());
         double layerSuitability = ctx.layerSuitability(location.getLayer());
         return weightNorm * layerSuitability;
     }

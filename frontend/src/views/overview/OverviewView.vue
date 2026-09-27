@@ -48,6 +48,21 @@ const statusSummary = computed(() => {
   return summary
 })
 
+/**
+ * 统计某货架下指定状态的库位数。
+ *
+ * 放在脚本侧而不是模板内联：模板表达式里写 TS 类型标注会被模板编译器当作 JS 解析。
+ *
+ * @param locations 货架下的库位列表
+ * @param status 目标状态（free / occupied / disabled）
+ */
+function countByStatus(
+  locations: Array<{ status: string }> | undefined,
+  status: string,
+): number {
+  return (locations ?? []).filter((location) => location.status === status).length
+}
+
 /** 加载仓库下拉列表。 */
 async function loadWarehouses(): Promise<void> {
   const result = await listWarehouses({ page: 1, page_size: 100 })
@@ -152,10 +167,10 @@ onMounted(async () => {
           <el-table-column label="状态分布">
             <template #default="{ row }">
               <el-tag type="success" size="small">
-                空闲 {{ row.locations.filter((l: { status: string }) => l.status === 'free').length }}
+                空闲 {{ countByStatus(row.locations, 'free') }}
               </el-tag>
               <el-tag type="warning" size="small" class="overview__tag">
-                占用 {{ row.locations.filter((l: { status: string }) => l.status === 'occupied').length }}
+                占用 {{ countByStatus(row.locations, 'occupied') }}
               </el-tag>
             </template>
           </el-table-column>

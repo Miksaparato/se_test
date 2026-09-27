@@ -1,4 +1,4 @@
-import { request } from './http'
+import { get, post, put } from './http'
 import type {
   CalibrateRequest,
   CalibrateResult,
@@ -6,27 +6,34 @@ import type {
   StorageRuleConfig,
 } from '@/types'
 
+/**
+ * 权重 / 分层规则 / 参数校准接口（API-044 ~ API-048，负责人 b）。
+ *
+ * 统一走 a 提供的 axios 封装（`./http`），自动携带 `Authorization: Bearer <token>`
+ * 并统一处理 401/403/422（《代码规范》5.4）。
+ */
+
 /** API-044 获取评分权重配置。 */
 export function getWeights(): Promise<ScoreWeightConfig> {
-  return request<ScoreWeightConfig>({ method: 'GET', url: '/config/weights' })
+  return get<ScoreWeightConfig>('/config/weights')
 }
 
 /** API-045 更新评分权重（之和须为 1）。 */
 export function updateWeights(req: ScoreWeightConfig): Promise<ScoreWeightConfig> {
-  return request<ScoreWeightConfig>({ method: 'PUT', url: '/config/weights', data: req })
+  return put<ScoreWeightConfig>('/config/weights', req)
 }
 
 /** API-046 获取库位分层规则。 */
 export function getRules(): Promise<StorageRuleConfig> {
-  return request<StorageRuleConfig>({ method: 'GET', url: '/config/rules' })
+  return get<StorageRuleConfig>('/config/rules')
 }
 
 /** API-047 更新分层规则（如「第 1 层放重货」）。 */
 export function updateRules(req: StorageRuleConfig): Promise<StorageRuleConfig> {
-  return request<StorageRuleConfig>({ method: 'PUT', url: '/config/rules', data: req })
+  return put<StorageRuleConfig>('/config/rules', req)
 }
 
 /** API-048 参数校准：按新参数重新评分（预览，不落库）。 */
 export function calibrate(req: CalibrateRequest): Promise<CalibrateResult> {
-  return request<CalibrateResult>({ method: 'POST', url: '/config/calibrate', data: req })
+  return post<CalibrateResult>('/config/calibrate', req)
 }

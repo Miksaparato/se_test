@@ -47,7 +47,7 @@ public class ScoringEngine {
 
         // 1. 硬约束过滤：重货禁止分配到超过预设层高（算法 5.4）
         List<Location> eligible = freeLocations.stream()
-                .filter(l -> rules.allowsHeavyOnLayer(sku.getWeight(), l.getLayer()))
+                .filter(l -> rules.allowsHeavyOnLayer(sku.weightValue(), l.getLayer()))
                 .toList();
 
         // 2. 构建评分上下文（计算 min/max 距离、最大层号等共享量）

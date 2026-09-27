@@ -18,5 +18,17 @@ export default defineConfigWithVueTs(
   },
   pluginVue.configs['flat/essential'],
   vueTsConfigs.recommended,
+  {
+    name: 'app/rules',
+    rules: {
+      // 「解构省略某字段」是本工程更新接口的惯用写法（如提交更新时剔除只读的 code）：
+      // const { code: _code, ...payload } = form。开启 rest 兄弟节点豁免后，被省略的字段
+      // 不再被误报为未使用变量。
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', ignoreRestSiblings: true },
+      ],
+    },
+  },
   skipFormatting,
 )

@@ -18,7 +18,7 @@ public class PriorityScorer implements Scorer {
 
     @Override
     public double score(Sku sku, Location location, ScoringContext ctx) {
-        double priorityNorm = clamp(sku.getPriority() / (double) ctx.getRules().getMaxPriority());
+        double priorityNorm = clamp(sku.priorityValue() / (double) ctx.getRules().getMaxPriority());
         double proximity = ctx.proximity(location.getX(), location.getY());
         return priorityNorm * proximity;
     }

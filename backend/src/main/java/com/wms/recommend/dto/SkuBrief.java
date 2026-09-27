@@ -10,7 +10,7 @@ public record SkuBrief(Long id, String skuCode, String name, double weight,
         if (s == null) {
             return null;
         }
-        return new SkuBrief(s.getId(), s.getSkuCode(), s.getName(), s.getWeight(),
-                s.getTurnoverRate(), s.getPriority(), s.getCategory());
+        return new SkuBrief(s.getId(), s.getSkuCode(), s.getName(), s.weightValue(),
+                s.turnoverRateValue(), s.priorityValue(), s.getCategory());
     }
 }
