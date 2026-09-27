@@ -8,9 +8,13 @@ import type { CompareRequest, CompareResult, Plan } from '@/types'
  * 并统一处理 401/403/422（《代码规范》5.4）。
  */
 
-/** API-049 分配方案列表（数据由 c 的仿真产生）。 */
-export function listPlans(): Promise<Plan[]> {
-  return get<Plan[]>('/plans')
+/**
+ * API-049 分配方案列表（数据由 c 的仿真产生）。
+ *
+ * @param warehouseId 可选，按仓库过滤（方案对比列表的主查询路径）
+ */
+export function listPlans(warehouseId?: number): Promise<Plan[]> {
+  return get<Plan[]>('/plans', warehouseId == null ? undefined : { warehouse_id: warehouseId })
 }
 
 /** API-050 方案详情。 */

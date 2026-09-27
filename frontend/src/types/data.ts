@@ -71,6 +71,13 @@ export interface RackPayload {
   orientation?: 'row' | 'column'
   /** 仅创建时有效：按列×层批量生成库位 */
   generateLocations?: boolean
+  /**
+   * 批量生成库位时使用的库位容量（体积口径）。
+   *
+   * 必须与 `skus.size` 同单位：留空取后端默认 100，若货物尺寸较大（如 30×20×10 = 6000）
+   * 会导致容量校验把全部库位判为「放不下」。
+   */
+  capacity?: number | null
 }
 
 /** 库位（API-025~027）。 */

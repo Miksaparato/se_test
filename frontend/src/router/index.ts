@@ -74,6 +74,30 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '订单管理', icon: 'Document', permission: 'sim:view' },
       },
       {
+        path: 'recommend',
+        name: 'recommend',
+        component: () => import('@/views/recommend/RecommendView.vue'),
+        meta: { title: '入库推荐', icon: 'MagicStick', permission: 'recommend:view' },
+      },
+      {
+        path: 'simulation',
+        name: 'simulation',
+        component: () => import('@/views/simulation/SimulationView.vue'),
+        meta: { title: '策略仿真', icon: 'Cpu', permission: 'sim:view' },
+      },
+      {
+        path: 'compare',
+        name: 'compare',
+        component: () => import('@/views/compare/CompareView.vue'),
+        meta: { title: '方案对比', icon: 'DataAnalysis', permission: 'compare:view' },
+      },
+      {
+        path: 'config',
+        name: 'config',
+        component: () => import('@/views/recommend/ConfigView.vue'),
+        meta: { title: '权重与规则', icon: 'SetUp', permission: 'config:manage' },
+      },
+      {
         path: 'admin/users',
         name: 'users',
         component: () => import('@/views/admin/UserListView.vue'),

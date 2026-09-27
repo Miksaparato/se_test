@@ -1,143 +1,251 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { adoptRecommendation, recommend } from '@/api/recommend'
-import WarehouseLayoutPlaceholder from '@/components/warehouse/WarehouseLayoutPlaceholder.vue'
-import { DEMO_SKUS, DEMO_WAREHOUSE_ID } from '@/constants/demo'
-import type { AdoptResult, LocationScore, RecommendationDto } from '@/types'
+import { computed, onMounted, reactive, ref } from 'vue'
+import { ElMessage } from 'element-plus'
 
-const skuId = ref<number>(DEMO_SKUS[0].id)
-const topN = ref<number>(10)
+import { getWarehouseLayout, listSkus, listWarehouses } from '@/api/data'
+import { adoptRecommendation, recommend } from '@/api/recommend'
+import WarehouseLayout from '@/components/warehouse/WarehouseLayout.vue'
+import type {
+  AdoptResult,
+  LayoutLocation,
+  RecommendationDto,
+  Sku,
+  Warehouse,
+  WarehouseLayout as WarehouseLayoutData,
+} from '@/types'
+
+/**
+ * 入库推荐页（界面需求 8.3 / B-F1、B-F2）。
+ *
+ * 展示「推荐列表（评分降序 + 分项得分 + 理由）」与「平面图高亮」两种视图，
+ * 并支持一键采用推荐完成入库（API-041 ~ API-043）。
+ *
+ * 平面图复用 c 的公共组件（C-F1，冻结契约 COM-5），本页只负责传 `highlight`。
+ *
+ * 负责人：b
+ */
+const warehouses = ref<Warehouse[]>([])
+const skus = ref<Sku[]>([])
+const layout = ref<WarehouseLayoutData | null>(null)
+
+const query = reactive({
+  warehouseId: undefined as number | undefined,
+  skuId: undefined as number | undefined,
+  topN: 10,
+})
+
 const loading = ref(false)
+const adopting = ref(false)
 const result = ref<RecommendationDto | null>(null)
 const adopted = ref<AdoptResult | null>(null)
-const error = ref('')
 
+/** 推荐候选库位 id（平面图高亮，B-F2）。 */
 const highlightIds = computed<number[]>(
-  () => result.value?.candidates.map((c) => c.locationId) ?? [],
+  () => result.value?.candidates.map((item) => item.locationId) ?? [],
 )
 
-async function onSubmit() {
-  loading.value = true
-  error.value = ''
+/** 布局库位平铺列表。 */
+const flatLocations = computed<LayoutLocation[]>(
+  () => (layout.value?.racks ?? []).flatMap((rack) => rack.locations),
+)
+
+/** 加载仓库与货物下拉。 */
+async function loadOptions(): Promise<void> {
+  const [warehousePage, skuPage] = await Promise.all([
+    listWarehouses({ page: 1, page_size: 100 }),
+    listSkus({ page: 1, page_size: 100 }),
+  ])
+  warehouses.value = warehousePage.list
+  skus.value = skuPage.list
+  query.warehouseId = warehousePage.list[0]?.id
+  query.skuId = skuPage.list[0]?.id
+  if (query.warehouseId) {
+    layout.value = await getWarehouseLayout(query.warehouseId)
+  }
+}
+
+/** 切换仓库时刷新平面图。 */
+async function onWarehouseChange(): Promise<void> {
   result.value = null
+  adopted.value = null
+  layout.value = query.warehouseId ? await getWarehouseLayout(query.warehouseId) : null
+}
+
+/** 计算推荐（API-041）。 */
+async function onSubmit(): Promise<void> {
+  if (!query.skuId || !query.warehouseId) {
+    ElMessage.warning('请先选择仓库与货物')
+    return
+  }
+  loading.value = true
   adopted.value = null
   try {
     result.value = await recommend({
-      skuId: skuId.value,
-      warehouseId: DEMO_WAREHOUSE_ID,
-      topN: topN.value,
+      skuId: query.skuId,
+      warehouseId: query.warehouseId,
+      topN: query.topN,
     })
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : String(e)
+  } catch {
+    result.value = null
   } finally {
     loading.value = false
   }
 }
 
-async function onAdopt() {
-  if (!result.value) return
-  error.value = ''
+/** 一键采用首位推荐（API-043）。 */
+async function onAdopt(): Promise<void> {
+  if (!result.value) {
+    return
+  }
+  adopting.value = true
   try {
     adopted.value = await adoptRecommendation(result.value.recommendationId)
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : String(e)
+    ElMessage.success(`已采用库位 ${adopted.value.code}`)
+    if (query.warehouseId) {
+      layout.value = await getWarehouseLayout(query.warehouseId)
+    }
+  } catch {
+    // 错误提示已由 http 拦截器统一处理
+  } finally {
+    adopting.value = false
   }
 }
 
-function fmt(n: number): string {
-  return n.toFixed(2)
-}
-
+/**
+ * 评分条宽度（按综合评分 0~1 折算）。
+ *
+ * @param score 综合评分
+ */
 function scoreBarWidth(score: number): string {
   return `${Math.max(0, Math.min(1, score)) * 100}%`
 }
 
-function rowClass(c: LocationScore): string {
-  return result.value && c === result.value.candidates[0] ? 'best-row' : ''
+/**
+ * 数值格式化。
+ *
+ * @param value 数值
+ * @param digits 小数位
+ */
+function fmt(value: number | null | undefined, digits = 3): string {
+  return value == null ? '-' : value.toFixed(digits)
 }
+
+onMounted(async () => {
+  try {
+    await loadOptions()
+  } catch {
+    // 错误提示已由 http 拦截器统一处理
+  }
+})
 </script>
 
 <template>
-  <div>
-    <div class="card">
-      <div class="card-title">入库推荐（B-F1）</div>
-      <div class="form-row">
-        <label for="sku">货物</label>
-        <select id="sku" v-model.number="skuId">
-          <option v-for="s in DEMO_SKUS" :key="s.id" :value="s.id">
-            {{ s.skuCode }} - {{ s.name }}（{{ s.weight }}kg / 频次 {{ s.turnoverRate }}）
-          </option>
-        </select>
+  <div class="wms-page">
+    <el-card shadow="never">
+      <div class="wms-search-bar">
+        <span>仓库：</span>
+        <el-select v-model="query.warehouseId" style="width: 220px" @change="onWarehouseChange">
+          <el-option
+            v-for="item in warehouses"
+            :key="item.id"
+            :label="`${item.name}（${item.code}）`"
+            :value="item.id"
+          />
+        </el-select>
 
-        <label for="topN">返回数量</label>
-        <input id="topN" v-model.number="topN" type="number" min="1" max="50" style="width: 90px" />
+        <span>货物：</span>
+        <el-select v-model="query.skuId" filterable style="width: 320px">
+          <el-option
+            v-for="sku in skus"
+            :key="sku.id"
+            :label="`${sku.skuCode} - ${sku.name}（${sku.weight}kg / 频次 ${sku.turnoverRate} / 优先级 ${sku.priority}）`"
+            :value="sku.id"
+          />
+        </el-select>
 
-        <button class="primary" :disabled="loading" @click="onSubmit">
-          {{ loading ? '计算中…' : '生成推荐' }}
-        </button>
+        <span>返回数量</span>
+        <el-input-number v-model="query.topN" :min="1" :max="50" size="small" style="width: 120px" />
+
+        <el-button type="primary" :loading="loading" @click="onSubmit">生成推荐</el-button>
       </div>
-      <p class="muted">当前仓库：一号仓（id={{ DEMO_WAREHOUSE_ID }}）。TODO(a)：接入仓库/SKU 列表接口后改为动态选择。</p>
-    </div>
+      <div class="wms-muted">
+        推荐结果按综合评分降序展示，并给出每个候选库位、各分项得分与可读理由（FR-2.2）。
+      </div>
+    </el-card>
 
-    <div v-if="error" class="card">
-      <div class="error">{{ error }}</div>
-    </div>
-
-    <div v-if="result" class="card">
-      <div class="card-title">
+    <el-card v-if="result" shadow="never">
+      <template #header>
         推荐结果 · {{ result.sku.skuCode }}（{{ result.sku.name }}）
-        <span class="muted">编号 {{ result.recommendationId }}</span>
-      </div>
+        <span class="wms-muted">编号 {{ result.recommendationId }}</span>
+      </template>
 
-      <table>
-        <thead>
-          <tr>
-            <th>排名</th>
-            <th>库位编码</th>
-            <th>综合评分</th>
-            <th>重量分</th>
-            <th>频次分</th>
-            <th>优先级分</th>
-            <th>其他分</th>
-            <th>推荐理由</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(c, i) in result.candidates" :key="c.locationId" :class="rowClass(c)">
-            <td>{{ i + 1 }}</td>
-            <td>{{ c.code }}</td>
-            <td>
-              <span class="score-bar" :style="{ width: scoreBarWidth(c.score) }"></span>
-              {{ fmt(c.score) }}
-            </td>
-            <td>{{ fmt(c.subScores.weight) }}</td>
-            <td>{{ fmt(c.subScores.freq) }}</td>
-            <td>{{ fmt(c.subScores.priority) }}</td>
-            <td>{{ fmt(c.subScores.other) }}</td>
-            <td>{{ c.reason }}</td>
-          </tr>
-        </tbody>
-      </table>
+      <el-table :data="result.candidates" border stripe size="small">
+        <el-table-column type="index" label="排名" width="70" />
+        <el-table-column prop="code" label="库位编码" width="130" />
+        <el-table-column label="综合评分" width="190">
+          <template #default="{ row }">
+            <div class="recommend__score">
+              <span class="score-bar" :style="{ width: scoreBarWidth(row.score) }" />
+              <span>{{ fmt(row.score) }}</span>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="重量分" width="90">
+          <template #default="{ row }">{{ fmt(row.subScores.weight) }}</template>
+        </el-table-column>
+        <el-table-column label="频次分" width="90">
+          <template #default="{ row }">{{ fmt(row.subScores.freq) }}</template>
+        </el-table-column>
+        <el-table-column label="优先级分" width="100">
+          <template #default="{ row }">{{ fmt(row.subScores.priority) }}</template>
+        </el-table-column>
+        <el-table-column label="其他分" width="90">
+          <template #default="{ row }">{{ fmt(row.subScores.other) }}</template>
+        </el-table-column>
+        <el-table-column prop="reason" label="推荐理由" min-width="260" />
+      </el-table>
 
-      <div class="form-row" style="margin-top: 16px">
-        <button class="primary" :disabled="adopted !== null" @click="onAdopt">
+      <div class="recommend__actions">
+        <el-button type="primary" :loading="adopting" :disabled="adopted !== null" @click="onAdopt">
           一键采用首位推荐
-        </button>
+        </el-button>
         <span v-if="adopted" class="success">
           已采用库位 {{ adopted.code }}（评分 {{ fmt(adopted.score) }}，状态 {{ adopted.status }}）
         </span>
       </div>
-    </div>
 
-    <div class="card">
-      <div class="card-title">平面图高亮（B-F2，占位）</div>
-      <WarehouseLayoutPlaceholder :locations="[]" :exit="{ x: 0, y: 0 }" :highlight="highlightIds" />
-    </div>
+      <el-divider content-position="left">平面图高亮（B-F2）</el-divider>
+      <WarehouseLayout
+        :locations="flatLocations"
+        :exit="layout?.exit ?? { x: 0, y: 0 }"
+        :highlight="highlightIds"
+        :height="360"
+      />
+    </el-card>
+
+    <el-empty v-else-if="!loading" description="选择货物后点击「生成推荐」" />
   </div>
 </template>
 
 <style scoped>
-.best-row {
-  background: #ecf5ff;
+.recommend__score {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.recommend__score .score-bar {
+  width: 60px;
+  height: 8px;
+  border-radius: 4px;
+  background: #409eff;
+  display: inline-block;
+}
+
+.recommend__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
 }
 </style>
