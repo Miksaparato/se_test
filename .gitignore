@@ -9,6 +9,15 @@ node_modules/
 dist/
 dist-ssr/
 *.local
+# 构建产物
+target/
+*.class
+*.jar
+*.war
+!.mvn/wrapper/maven-wrapper.jar
+
+# Maven 工程级本地仓库（见 backend/maven-settings.xml）
+.mvn-repo/
 
 # IDE
 .idea/
@@ -19,7 +28,21 @@ dist-ssr/
 # OS
 .DS_Store
 Thumbs.db
+.settings/
+.project
+.classpath
 
 # 日志
 *.log
 logs/
+
+# 前端
+node_modules/
+dist/
+dist-ssr/
+*.local
+.npm-cache/
+
+# 操作系统
+Thumbs.db
+.DS_Store

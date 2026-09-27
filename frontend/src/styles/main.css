@@ -1,3 +1,17 @@
+/**
+ * 全局样式与主题变量（《代码规范》5.1：主题变量统一放 styles/）。
+ *
+ * 负责人：a
+ */
+
+:root {
+  --wms-primary: #409eff;
+  --wms-header-height: 56px;
+  --wms-sidebar-width: 220px;
+  --wms-page-padding: 16px;
+  --wms-text-muted: #909399;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -143,4 +157,62 @@ label {
   border-radius: 4px;
   background: #409eff;
   vertical-align: middle;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family:
+    'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Arial,
+    sans-serif;
+  font-size: 14px;
+  color: #303133;
+  background-color: #f5f7fa;
+}
+
+/** 页面容器：统一内边距与卡片间距 */
+.wms-page {
+  padding: var(--wms-page-padding);
+}
+
+/** 查询表单区 */
+.wms-search-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+/** 表格工具条（新增/导入/导出按钮） */
+.wms-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.wms-toolbar--right {
+  margin-left: auto;
+}
+
+/** 分页容器 */
+.wms-pagination {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+/** 次要说明文字 */
+.wms-muted {
+  color: var(--wms-text-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/** 表单弹窗内的表单项宽度 */
+.wms-dialog .el-form-item {
+  margin-bottom: 16px;
 }

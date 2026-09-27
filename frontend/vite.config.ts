@@ -4,6 +4,15 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 
 // https://vitejs.dev/config/
+import vue from '@vitejs/plugin-vue'
+import { defineConfig } from 'vite'
+
+/**
+ * Vite 配置。
+ *
+ * 负责人：a（A-F1~A-F4 / COM-1）
+ * 说明：开发环境把 /api 代理到后端 8080，避免跨域；生产由网关或同域部署处理。
+ */
 export default defineConfig({
   plugins: [vue()],
   resolve: {
@@ -17,8 +26,16 @@ export default defineConfig({
     proxy: {
       '/api': {
         target: 'http://localhost:8080',
+    proxy: {
+      '/api': {
+        target: 'http://127.0.0.1:8080',
         changeOrigin: true,
       },
     },
+  },
+  build: {
+    outDir: 'dist',
+    sourcemap: false,
+    chunkSizeWarningLimit: 1500,
   },
 })

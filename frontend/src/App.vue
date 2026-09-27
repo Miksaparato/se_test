@@ -67,3 +67,13 @@ import { RouterLink, RouterView } from 'vue-router'
   padding: 20px 24px;
 }
 </style>
+/**
+ * 应用根组件。
+ *
+ * 负责人：a
+ */
+</script>
+
+<template>
+  <router-view />
+</template>
