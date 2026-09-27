@@ -1,6 +1,12 @@
 package com.wms.common;
 
 /**
+ * 业务异常：携带 {@link ErrorCode}，由 {@link GlobalExceptionHandler} 统一转换为 {@link ApiResponse}。
+ */
+public class BizException extends RuntimeException {
+
+    private final int code;
+
  * 业务异常，由 {@link GlobalExceptionHandler} 统一转换为 {@link ApiResponse}。
  *
  * <p>使用方式（《代码规范》4.2）：
@@ -28,6 +34,7 @@ public class BizException extends RuntimeException {
         this.code = errorCode.getCode();
     }
 
+    /** 允许附加自定义错误信息（如「货物不存在: 3」）。 */
     /**
      * 按错误码枚举构造异常，并覆盖提示信息。
      *
