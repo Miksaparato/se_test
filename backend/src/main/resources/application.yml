@@ -45,7 +45,13 @@ spring:
     enabled: true
     locations: classpath:db/migration
     baseline-on-migrate: true
-    baseline-version: 0
+    # 认领「按 backend/sql/schema.sql 手工建过库」的既有数据库：
+    # baseline-on-migrate 只在「库非空且无 flyway_schema_history」时生效，此时 Flyway 会把
+    # baseline-version 记为已应用基线，忽略 V1~V3（它们的内容与既有结构一致，见
+    # tools/build_schema_sql.py 生成的 schema.sql），此后从 V4 继续版本化。
+    # 空库首次启动不受影响：库为空时不触发 baseline，仍会顺序执行 V1~V3。
+    # 需要更严格的校验时，用环境变量把它调回 0：WMS_FLYWAY_BASELINE_VERSION=0
+    baseline-version: ${WMS_FLYWAY_BASELINE_VERSION:3}
     validate-on-migrate: true
     encoding: UTF-8
     table: flyway_schema_history
@@ -84,6 +90,8 @@ mybatis-plus:
 
 # ---------- 业务自定义配置（a 的鉴权与安全参数） ----------
 wms:
+  # 数据访问实现：mysql（默认，数据来自 MySQL）/ memory（无库演示模式，内置演示数据）
+  repository: ${WMS_REPOSITORY:mysql}
   security:
     # JWT 签名密钥：HS256 要求至少 32 字节；生产必须通过环境变量覆盖
     jwt-secret: ${WMS_JWT_SECRET:wms-sim-local-dev-secret-key-please-change-in-production}
@@ -96,6 +104,14 @@ wms:
     allowed-origins:
       - http://localhost:5173
       - http://127.0.0.1:5173
+  # 分区（品类 ↔ 巷道）映射：locations 表无分区列，库位分区由所属货架的 racks.aisle 派生。
+  # 供 b 的评分 S_other 品类匹配（FR-2.1）与 c 的「分区存储」策略（FR-3.1）使用，可配置（FR-2.3）。
+  # 未配置的巷道 → 库位无分区约束，品类匹配取中性分，不影响推荐可用性。
+  zone:
+    aisle-category:
+      A: 电子
+      B: 食品
+      C: 机械
 
 # ---------- 日志 ----------
 logging:

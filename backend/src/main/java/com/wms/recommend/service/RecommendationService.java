@@ -58,7 +58,7 @@ public class RecommendationService {
         }
 
         List<LocationScore> scores = engine.score(sku, free, wh,
-                configService.getWeights(), configService.getRules(), repository.occupiedSnapshot());
+                configService.getWeights(), configService.getRules(), repository.occupiedSnapshot(warehouseId));
         if (scores.isEmpty()) {
             throw new BizException(ErrorCode.NO_ELIGIBLE_LOCATION, "无满足约束的库位（重货层高规则可能过滤了全部空位）");
         }
@@ -95,7 +95,8 @@ public class RecommendationService {
         if (!loc.isFree()) {
             throw new BizException(ErrorCode.LOCATION_OCCUPIED, "库位 " + loc.getCode() + " 已被占用");
         }
-        repository.updateLocationStatus(loc.getId(), "occupied");
+        // 占用库位并写入 occupied_sku_id：约束「一库位一货物」由仓储层条件更新保证
+        repository.occupyLocation(loc.getId(), dto.sku().id());
         return new AdoptResult(loc.getId(), loc.getCode(), "occupied", top.getScore());
     }
 

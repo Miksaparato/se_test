@@ -81,7 +81,8 @@ public class ConfigService {
         r.validate();
 
         List<Location> free = repository.listFreeLocations(warehouseId);
-        List<LocationScore> scores = engine.score(sku, free, wh, w, r, repository.occupiedSnapshot());
+        List<LocationScore> scores = engine.score(sku, free, wh, w, r,
+                repository.occupiedSnapshot(warehouseId));
         int n = topN == null || topN <= 0 ? Math.min(10, scores.size()) : Math.min(topN, scores.size());
         return scores.subList(0, Math.max(0, n));
     }

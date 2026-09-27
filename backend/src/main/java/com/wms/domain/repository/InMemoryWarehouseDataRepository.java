@@ -1,65 +1,111 @@
 package com.wms.domain.repository;
 
+import com.wms.common.BizException;
+import com.wms.common.ErrorCode;
+import com.wms.config.ZoneProperties;
 import com.wms.domain.entity.Location;
 import com.wms.domain.entity.Plan;
+import com.wms.domain.entity.Rack;
 import com.wms.domain.entity.Sku;
 import com.wms.domain.entity.Warehouse;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * {@link WarehouseDataRepository} 的内存实现，用于成员 b 模块独立运行与单测。
- * 构造时内置演示数据（1 个仓库 + 若干库位 + 5 个 SKU + 3 个方案）。
- * 联调时由成员 a 以 MyBatis-Plus 实现替换（数据来自 MySQL）。
+ * {@link WarehouseDataRepository} 的内存实现（**演示/离线模式**）。
+ *
+ * <p>仅在 {@code wms.repository=memory} 时启用（默认走 MySQL 的
+ * {@link MybatisWarehouseDataRepository}）。用途：
+ * <ul>
+ *   <li>无 MySQL 环境下独立启动演示推荐/仿真（README 的「可独立运行」场景）；</li>
+ *   <li>算法单测直接用实体构造数据时不经过 Spring，本类不参与。</li>
+ * </ul>
+ *
+ * <p>构造时内置演示数据：1 个仓库、3 个货架、36 个库位、5 个货物、3 个方案。
+ *
+ * @author a
  */
 @Component
+@ConditionalOnProperty(name = "wms.repository", havingValue = "memory")
 public class InMemoryWarehouseDataRepository implements WarehouseDataRepository {
 
+    /** 演示仓库 id。 */
+    public static final long DEMO_WAREHOUSE_ID = 1L;
+
+    private static final String STATUS_FREE = "free";
+    private static final String STATUS_OCCUPIED = "occupied";
+
     private final Map<Long, Warehouse> warehouses = new ConcurrentHashMap<>();
+    private final Map<Long, Rack> racks = new ConcurrentHashMap<>();
     private final Map<Long, Location> locations = new ConcurrentHashMap<>();
     private final Map<Long, Sku> skus = new ConcurrentHashMap<>();
     private final Map<Long, Plan> plans = new ConcurrentHashMap<>();
+    private final AtomicLong planSeq = new AtomicLong(100L);
 
-    public InMemoryWarehouseDataRepository() {
+    private final ZoneProperties zoneProperties;
+
+    /**
+     * 构造并写入演示数据。
+     *
+     * @param zoneProperties 分区（品类 ↔ 巷道）映射配置，用于给内存库位派生品类
+     */
+    public InMemoryWarehouseDataRepository(ZoneProperties zoneProperties) {
+        this.zoneProperties = zoneProperties;
         seed();
     }
 
     private void seed() {
-        Warehouse w = new Warehouse(1L, "一号仓", 0, 0);
+        Warehouse w = new Warehouse(DEMO_WAREHOUSE_ID, "一号仓", 0, 0);
+        w.setCode("WH-DEMO");
         warehouses.put(w.getId(), w);
 
-        // 网格库位：4 列 × 3 行 × 3 层 = 36 个；x 为列方向，y 为行方向，layer 1 为最底层
-        long id = 1001L;
-        int col = 1;
-        for (int x = 2; x <= 8; x += 2) {
-            int row = 1;
-            for (int y = 2; y <= 6; y += 2) {
+        // 3 个货架（巷道 A/B/C），每个 4 列 × 3 层 = 12 个库位，共 36 个
+        String[] aisles = {"A", "B", "C"};
+        long rackId = 1L;
+        long locationId = 1001L;
+        for (int r = 0; r < aisles.length; r++) {
+            String aisle = aisles[r];
+            Rack rack = new Rack();
+            rack.setId(rackId);
+            rack.setWarehouseId(w.getId());
+            rack.setCode(aisle + "-01");
+            rack.setAisle(aisle);
+            rack.setColumnCount(4);
+            rack.setLayerCount(3);
+            rack.setX(r * 4 + 2);
+            rack.setY(2);
+            rack.setOrientation("row");
+            racks.put(rackId, rack);
+
+            for (int col = 1; col <= 4; col++) {
                 for (int layer = 1; layer <= 3; layer++) {
-                    Location l = new Location(id,
-                            String.format("A-%02d-%02d-%02d", col, row, layer),
+                    int x = (r * 4) + col * 2;
+                    int y = 2 + (col - 1) * 2;
+                    Location l = new Location(locationId,
+                            String.format("%s-%02d-%02d-%02d", aisle, rackId, col, layer),
                             x, y, layer, w.getId());
-                    // 分区品类：x 小 → 电子区，x 大 → 食品区；部分无分区约束
-                    if (x <= 4) {
-                        l.setCategory("电子");
-                    } else if (x >= 6 && col % 2 == 1) {
-                        l.setCategory("食品");
-                    }
-                    l.setCapacity(java.math.BigDecimal.valueOf(100));
+                    l.setRackId(rackId);
+                    l.setCapacity(BigDecimal.valueOf(100));
+                    l.setCategory(zoneProperties.categoryOfAisle(aisle));
                     // 约 1/3 预置为占用，用于演示空位连续性与空闲池
-                    if ((id % 3) == 0) {
-                        l.setStatus("occupied");
+                    if (locationId % 3 == 0) {
+                        l.setStatus(STATUS_OCCUPIED);
                     }
-                    locations.put(id, l);
-                    id++;
+                    locations.put(locationId, l);
+                    locationId++;
                 }
-                row++;
             }
-            col++;
+            rackId++;
         }
 
         skus.put(1L, new Sku(1L, "SKU-001", "高频电子元件", 50, 0.9, 5, "电子"));
@@ -68,9 +114,9 @@ public class InMemoryWarehouseDataRepository implements WarehouseDataRepository 
         skus.put(4L, new Sku(4L, "SKU-004", "食品", 12, 0.7, 4, "食品"));
         skus.put(5L, new Sku(5L, "SKU-005", "五金配件", 90, 0.4, 3, "机械"));
 
-        plans.put(10L, new Plan(10L, "随机分配", "随机分配", 5820, 116.4, 210.3, 5));
-        plans.put(11L, new Plan(11L, "就近分配", "就近分配", 4310, 86.2, 98.1, 0));
-        plans.put(12L, new Plan(12L, "智能推荐", "智能推荐", 4755, 95.1, 76.4, 0));
+        plans.put(10L, new Plan(10L, "随机分配", "random", 5820, 116.4, 210.3, 5));
+        plans.put(11L, new Plan(11L, "就近分配", "nearest", 4310, 86.2, 98.1, 0));
+        plans.put(12L, new Plan(12L, "智能推荐", "smart", 4755, 95.1, 76.4, 0));
     }
 
     @Override
@@ -96,14 +142,14 @@ public class InMemoryWarehouseDataRepository implements WarehouseDataRepository 
     @Override
     public List<Location> listLocations(Long warehouseId) {
         return locations.values().stream()
-                .filter(l -> warehouseId.equals(l.getWarehouseId()))
+                .filter(l -> warehouseId != null && warehouseId.equals(l.getWarehouseId()))
+                .sorted(Comparator.comparing(Location::getId))
                 .toList();
     }
 
     @Override
     public List<Location> listFreeLocations(Long warehouseId) {
-        return locations.values().stream()
-                .filter(l -> warehouseId.equals(l.getWarehouseId()))
+        return listLocations(warehouseId).stream()
                 .filter(Location::isFree)
                 .toList();
     }
@@ -114,27 +160,59 @@ public class InMemoryWarehouseDataRepository implements WarehouseDataRepository 
     }
 
     @Override
-    public void updateLocationStatus(Long locationId, String status) {
-        Location l = locations.get(locationId);
-        if (l != null) {
-            l.setStatus(status);
-        }
+    public Optional<Rack> findRack(Long id) {
+        return Optional.ofNullable(racks.get(id));
     }
 
     @Override
-    public Map<String, Boolean> occupiedSnapshot() {
-        Map<String, Boolean> m = new ConcurrentHashMap<>();
+    public List<Rack> listRacks(Long warehouseId) {
+        return racks.values().stream()
+                .filter(r -> warehouseId != null && warehouseId.equals(r.getWarehouseId()))
+                .sorted(Comparator.comparing(Rack::getId))
+                .toList();
+    }
+
+    @Override
+    public void occupyLocation(Long locationId, Long skuId) {
+        Location l = locations.get(locationId);
+        if (l == null) {
+            throw new BizException(ErrorCode.LOCATION_NOT_FOUND, "库位不存在: " + locationId);
+        }
+        if (!l.isFree()) {
+            throw new BizException(ErrorCode.LOCATION_OCCUPIED, "库位 " + l.getCode() + " 已被占用");
+        }
+        l.setStatus(STATUS_OCCUPIED);
+        l.setOccupiedSkuId(skuId);
+    }
+
+    @Override
+    public void releaseLocation(Long locationId) {
+        Location l = locations.get(locationId);
+        if (l == null) {
+            throw new BizException(ErrorCode.LOCATION_NOT_FOUND, "库位不存在: " + locationId);
+        }
+        l.setStatus(STATUS_FREE);
+        l.setOccupiedSkuId(null);
+    }
+
+    @Override
+    public Map<String, Boolean> occupiedSnapshot(Long warehouseId) {
+        Map<String, Boolean> m = new HashMap<>();
         for (Location l : locations.values()) {
-            if (!l.isFree()) {
-                m.put(coordKey(l.getX(), l.getY(), l.getLayer()), true);
+            if (warehouseId != null && warehouseId.equals(l.getWarehouseId()) && !l.isFree()) {
+                m.put(l.getX() + "," + l.getY() + "," + l.getLayer(), Boolean.TRUE);
             }
         }
         return m;
     }
 
     @Override
-    public List<Plan> listPlans() {
-        return new ArrayList<>(plans.values());
+    public List<Plan> listPlans(Long warehouseId) {
+        return plans.values().stream()
+                .filter(p -> warehouseId == null || warehouseId.equals(p.getWarehouseId())
+                        || p.getWarehouseId() == null)
+                .sorted(Comparator.comparing(Plan::getId).reversed())
+                .toList();
     }
 
     @Override
@@ -142,7 +220,21 @@ public class InMemoryWarehouseDataRepository implements WarehouseDataRepository 
         return Optional.ofNullable(plans.get(id));
     }
 
-    private static String coordKey(int x, int y, int layer) {
-        return x + "," + y + "," + layer;
+    /**
+     * 内存模式下的方案登记（MySQL 模式由 {@code PlanMapper} 落库）。
+     *
+     * @param plan 方案（id 为空时自动分配）
+     * @return 登记后的方案
+     */
+    @Override
+    public Plan savePlan(Plan plan) {
+        if (plan.getId() == null) {
+            plan.setId(planSeq.incrementAndGet());
+        }
+        if (plan.getWarehouseId() == null) {
+            plan.setWarehouseId(DEMO_WAREHOUSE_ID);
+        }
+        plans.put(plan.getId(), plan);
+        return plan;
     }
 }

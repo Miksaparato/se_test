@@ -25,8 +25,8 @@ public class CompareService {
         this.repository = repository;
     }
 
-    public List<Plan> listPlans() {
-        return repository.listPlans();
+    public List<Plan> listPlans(Long warehouseId) {
+        return repository.listPlans(warehouseId);
     }
 
     public Plan getPlan(Long id) {
@@ -60,7 +60,7 @@ public class CompareService {
                 .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "方案不存在: " + id));
         List<PlanMetric> ordered = new ArrayList<>();
         ordered.add(PlanMetric.from(target));
-        for (Plan p : repository.listPlans()) {
+        for (Plan p : repository.listPlans(target.getWarehouseId())) {
             if (!p.getId().equals(id)) {
                 ordered.add(PlanMetric.from(p));
             }

@@ -7,61 +7,142 @@
 ```
 se_test/
 ├── backend/     # Java 17 + Spring Boot 3.2（Maven）
-├── frontend/    # Vue 3 + TypeScript + Vite（Pinia + Vue Router + ECharts）
-├── database/    # MySQL 8 + Flyway 迁移脚本（成员 a 牵头）
-└── document/    # 需求 / 分工 / 接口 / 代码规范 / 算法说明
+├── frontend/    # Vue 3 + TypeScript + Vite（Pinia + Vue Router + Element Plus + ECharts）
+├── database/    # 数据库相关说明（建表脚本见 backend/sql/schema.sql 与 db/migration）
+├── docs/        # 数据库设计说明书 / 鉴权中间件规范 / 使用说明文档
+└── document/    # 需求 / 分工 / 接口 / 代码规范 / 算法说明（冻结契约）
 ```
 
 ## 分支模型
 
 `main`（稳定）← `dev`（集成）← `feature/a-*` / `feature/b-*` / `feature/c-*`（开发）。
 
-当前各模块进展：
+模块归属（《任务分工文档》）：
 
-- **成员 a**：基础数据 + RBAC（`feature_a`）
-- **成员 b**：库位智能推荐 / 方案对比 / 报告导出 / 调参（`feature_b`）
-- **成员 c**：入库策略仿真 / 出库仿真 / 可视化（`feature_c`）
+| 成员 | 模块 | 后端包 | 前端页面 |
+| --- | --- | --- | --- |
+| **a** | 基础数据 + RBAC | `com.wms.data.*`、`com.wms.security`、`com.wms.domain` | 登录、数据管理、用户/角色 |
+| **b** | 库位智能推荐 + 方案对比 | `com.wms.recommend.*` | 入库推荐、方案对比、权重配置 |
+| **c** | 入库/出库仿真 + 可视化 | `com.wms.simulation.*` | 总览平面图、仿真配置、路径与统计 |
 
-## 后端启动（成员 b 模块，可独立运行）
+---
+
+## 一、准备数据库（MySQL 8）
+
+任选其一，**两种方式都受支持**：
+
+**方式一（推荐）：交给 Flyway 自动执行**
+
+```bash
+mysql -u root -p -e "CREATE DATABASE wms_sim DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;"
+cd backend && mvn -s maven-settings.xml spring-boot:run
+```
+
+**方式二：手工执行 `backend/sql/schema.sql`**（适合数据库评审或无 Maven 环境）
+
+```bash
+mysql -u root -p --default-character-set=utf8mb4 < backend/sql/schema.sql
+```
+
+> `schema.sql` 由 `backend/tools/build_schema_sql.py` 从 `db/migration/V*.sql` 生成，
+> **唯一事实来源是 Flyway 脚本**：改了脚本请重新运行该工具同步。
+>
+> 手工建过库的环境没有 `flyway_schema_history` 表，应用启动时 Flyway 会以
+> `baseline-version=3` 认领既有结构（详见 `docs/数据库设计说明书.md` 6.2.3），
+> 不会因为「表已存在」而启动失败，也不会改动任何数据。
+
+默认连接参数（可用环境变量覆盖）：库 `wms_sim`、账号 `root`、密码 `123456`。
+
+| 环境变量 | 默认值 | 说明 |
+| --- | --- | --- |
+| `WMS_DB_URL` | `jdbc:mysql://127.0.0.1:3306/wms_sim?...` | JDBC 连接串 |
+| `WMS_DB_USERNAME` / `WMS_DB_PASSWORD` | `root` / `123456` | 数据库账号 |
+| `WMS_JWT_SECRET` | 开发用固定串 | JWT 签名密钥，生产必须覆盖 |
+| `WMS_REPOSITORY` | `mysql` | 数据访问实现：`mysql` / `memory` |
+| `WMS_FLYWAY_BASELINE_VERSION` | `3` | Flyway 认领既有库的基线版本，严格模式设为 `0` |
+
+## 二、启动后端
 
 依赖：JDK 17、Maven 3.8+。
 
 ```bash
 cd backend
-mvn spring-boot:run          # 默认 8080 端口
+mvn -s maven-settings.xml spring-boot:run     # 默认 8080 端口
 ```
 
-后端 b 模块目前使用内存数据实现（`InMemoryWarehouseDataRepository`），内置演示数据（1 个仓库、36 个库位、5 个 SKU、3 个分配方案），无需数据库即可启动。联调时由成员 a 以 MyBatis-Plus 实现替换。
-
-运行单测：
+**无 MySQL 也能跑**（离线演示模式，内置 1 仓库 / 3 货架 / 36 库位 / 5 SKU / 3 方案）：
 
 ```bash
 cd backend
-mvn test
+mvn -s maven-settings.xml spring-boot:run -Dspring-boot.run.arguments=--wms.repository=memory
 ```
 
-## 前端启动（成员 b 模块页面）
+运行测试：
+
+```bash
+cd backend
+mvn -s maven-settings.xml test                 # 单测 + MockMvc（80 项）
+mvn -s maven-settings.xml test -Pe2e           # 另跑真实 HTTP 端到端用例
+```
+
+## 三、写入演示数据（验收用）
+
+后端起来后执行（通过**公开 REST API** 建数据，会走真实业务校验，可重复执行）：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File backend/tools/seed_demo_data.ps1
+```
+
+产出：1 个仓库（`WH-01`，出库口在 `(0,0)`）、3 个货架（巷道 A/B/C，各 4 列 × 3 层 = **36 个库位**）、
+5 个 SKU、12 张出库订单。RBAC 种子（用户/角色/权限）完全不改动。
+
+## 四、启动前端
 
 依赖：Node 18+。
 
 ```bash
 cd frontend
 npm install
-npm run dev                  # 默认 5173，已配置代理到后端 8080
+npm run dev            # 默认 5173，已配置代理到后端 8080
 ```
 
-页面：`/recommend` 入库推荐、`/compare` 方案对比、`/config` 权重与规则配置。
+质量校验：
 
-## 成员 b 接口一览（API-041 ~ API-053）
+```bash
+npm run lint           # ESLint
+npm run type-check     # vue-tsc（检查 tsconfig.app.json / tsconfig.node.json）
+npm run build          # 生产构建
+```
 
-| 接口 | 方法 | 路径 | 说明 |
-| --- | --- | --- | --- |
-| API-041 | POST | `/api/v1/recommendations` | 计算推荐 |
-| API-042 | GET | `/api/v1/recommendations/{id}` | 查询推荐 |
-| API-043 | POST | `/api/v1/recommendations/{id}/adopt` | 采用推荐 |
-| API-044/045 | GET/PUT | `/api/v1/config/weights` | 权重配置 |
-| API-046/047 | GET/PUT | `/api/v1/config/rules` | 分层规则 |
-| API-048 | POST | `/api/v1/config/calibrate` | 参数校准 |
-| API-049~053 | GET/POST | `/api/v1/plans[...]` | 方案对比 / 建议 / 报告 |
+## 五、默认账号（初始密码均为 `admin123`）
 
-详见 `document/接口文档.md` 与 `document/T-6-评分模型算法说明.md`。
+| 账号 | 角色 | 权限范围 |
+| --- | --- | --- |
+| `admin` | 系统管理员 | 全部 9 项权限 |
+| `operator` | 仓库操作员 | 货物/订单管理、库位推荐、运行仿真、结果查看 |
+| `analyst` | 分析人员 | 运行仿真、结果查看、方案对比、报告导出 |
+| `viewer` | 只读访客 | 结果查看、方案对比 |
+
+> 首次登录后请通过 API-004（`PUT /api/v1/auth/password`）修改密码；
+> 演示/生产部署前务必删除或改密这 4 个内置账号。
+
+## 六、接口与契约
+
+Base URL `/api/v1`，统一响应 `{ "code": 0, "message": "success", "data": {} }`，
+认证头 `Authorization: Bearer <token>`。完整清单见 `document/接口文档.md`。
+
+| 开发者 | 接口范围 | 模块 |
+| --- | --- | --- |
+| a | API-001 ~ API-040 | 认证/RBAC、仓库/货架/库位、SKU、订单、导入导出 |
+| b | API-041 ~ API-053 | 推荐引擎、权重/规则配置、方案对比、建议与报告 |
+| c | API-054 ~ API-062 | 入库仿真、出库仿真与路程统计、随机订单集 |
+
+关键文档：
+
+- `document/智能仓储库位分配仿真系统-需求分析文档.md` —— 需求与验收标准
+- `document/接口文档.md` —— REST API 冻结契约（含权限码）
+- `document/代码规范.md` —— 编码/目录/测试规范
+- `docs/数据库设计说明书.md` —— 12 张表的数据字典与代码一致性核对结论
+- `docs/鉴权中间件规范.md` —— `@PreAuthorize` 用法与 401/403 返回格式
+- `document/T-6-评分模型算法说明.md` —— 推荐评分模型公式与口径
+- `docs/使用说明文档.md` —— 面向使用者的操作手册
