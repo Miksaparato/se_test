@@ -20,7 +20,7 @@
     因此本脚本按 -LocationCapacity（默认 100000）建库位，并把容量过小的既有库位纠正过来。
 
 .PARAMETER BaseUrl
-    后端地址，默认 http://127.0.0.1:8080
+    后端地址，默认 http://127.0.0.1:8081
 
 .PARAMETER Account
     登录账号，默认 admin（需要 warehouse:manage / sku:manage 权限）。
@@ -37,11 +37,11 @@
 
 .EXAMPLE
     pwsh backend/tools/seed_demo_data.ps1
-    pwsh backend/tools/seed_demo_data.ps1 -BaseUrl http://127.0.0.1:8080 -Account admin -Password admin123
+    pwsh backend/tools/seed_demo_data.ps1 -BaseUrl http://127.0.0.1:8081 -Account admin -Password admin123
 #>
 [CmdletBinding()]
 param(
-    [string]$BaseUrl = 'http://127.0.0.1:8080',
+    [string]$BaseUrl = 'http://127.0.0.1:8081',
     [string]$Account = 'admin',
     [string]$Password = 'admin123',
     [double]$LocationCapacity = 100000

@@ -84,7 +84,7 @@ class SkuOrderE2eTest {
                         "--logging.level.root=WARN");
 
         baseUrl = "http://127.0.0.1:"
-                + context.getEnvironment().getProperty("local.server.port", Integer.class, 8080);
+                + context.getEnvironment().getProperty("local.server.port", Integer.class, 8081);
         jdbcTemplate = context.getBean(JdbcTemplate.class);
 
         jdbcTemplate.update("INSERT INTO users (id, account, password, name, status) "

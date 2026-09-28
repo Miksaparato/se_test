@@ -88,7 +88,7 @@ class AuthE2eTest {
                         "--logging.level.root=WARN",
                         "--logging.level.com.wms=INFO");
 
-        int port = context.getEnvironment().getProperty("local.server.port", Integer.class, 8080);
+        int port = context.getEnvironment().getProperty("local.server.port", Integer.class, 8081);
         baseUrl = "http://127.0.0.1:" + port;
         jdbcTemplate = context.getBean(JdbcTemplate.class);
 

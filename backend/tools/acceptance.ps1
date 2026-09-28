@@ -20,7 +20,7 @@
     如需清理，按脚本末尾打印的资源 id 依次删除（方案可用 API-057 重置一并清除）。
 
 .PARAMETER BaseUrl
-    后端地址，默认 http://127.0.0.1:8080
+    后端地址，默认 http://127.0.0.1:8081
 
 .EXAMPLE
     powershell -ExecutionPolicy Bypass -File backend/tools/acceptance.ps1
@@ -30,7 +30,7 @@
 #>
 [CmdletBinding()]
 param(
-    [string]$BaseUrl = 'http://127.0.0.1:8080',
+    [string]$BaseUrl = 'http://127.0.0.1:8081',
     [string]$Password = 'admin123'
 )
 

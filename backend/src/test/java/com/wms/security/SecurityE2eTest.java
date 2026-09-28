@@ -83,7 +83,7 @@ class SecurityE2eTest {
                         "--mybatis-plus.configuration.log-impl=org.apache.ibatis.logging.nologging.NoLoggingImpl",
                         "--logging.level.root=WARN");
 
-        int port = context.getEnvironment().getProperty("local.server.port", Integer.class, 8080);
+        int port = context.getEnvironment().getProperty("local.server.port", Integer.class, 8081);
         baseUrl = "http://127.0.0.1:" + port;
         tokenProvider = context.getBean(JwtTokenProvider.class);
     }
