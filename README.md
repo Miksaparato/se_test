@@ -67,7 +67,7 @@ mysql -u root -p --default-character-set=utf8mb4 < backend/sql/schema.sql
 
 ```bash
 cd backend
-mvn -s maven-settings.xml spring-boot:run     # 默认 8080 端口
+mvn -s maven-settings.xml spring-boot:run     # 默认 8081 端口
 ```
 
 **无 MySQL 也能跑**（离线演示模式，内置 1 仓库 / 3 货架 / 36 库位 / 5 SKU / 3 方案）：
@@ -115,7 +115,7 @@ powershell -ExecutionPolicy Bypass -File backend/tools/acceptance.ps1
 ```bash
 cd frontend
 npm install
-npm run dev            # 默认 5173，已配置代理到后端 8080
+npm run dev            # 默认 5173，已配置代理到后端 8081
 ```
 
 质量校验：
@@ -124,7 +124,7 @@ npm run dev            # 默认 5173，已配置代理到后端 8080
 npm run lint           # ESLint
 npm run type-check     # vue-tsc（检查 tsconfig.app.json / tsconfig.node.json）
 npm run build          # 生产构建
-npm run preview        # 静态服务器 4173（/api 代理到 8080，用于联调验证）
+npm run preview        # 静态服务器 4173（/api 代理到 8081，用于联调验证）
 npm run verify:integration   # 27 项联调断言（角色菜单显隐 + 越权拦截）
 ```
 
