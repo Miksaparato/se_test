@@ -9,7 +9,7 @@ se_test/
 ├── backend/     # Java 17 + Spring Boot 3.2（Maven）
 ├── frontend/    # Vue 3 + TypeScript + Vite（Pinia + Vue Router + Element Plus + ECharts）
 ├── database/    # 数据库相关说明（建表脚本见 backend/sql/schema.sql 与 db/migration）
-├── docs/        # 数据库设计说明书 / 鉴权中间件规范 / 使用说明文档
+├── docs/        # 数据库设计说明书 / 鉴权中间件规范 / 使用说明文档 / 开发过程文档
 └── document/    # 需求 / 分工 / 接口 / 代码规范 / 算法说明（冻结契约）
 ```
 
@@ -174,3 +174,4 @@ Base URL `/api/v1`，统一响应 `{ "code": 0, "message": "success", "data": {}
 - `docs/数据库设计说明书.md` —— 12 张表的数据字典 + 表结构与代码的一致性核对结论
 - `docs/鉴权中间件规范.md` —— `@PreAuthorize` 用法与 401/403 返回格式
 - `docs/使用说明文档.md` —— 面向使用者的操作手册（含 b、c 模块操作说明）
+- `docs/开发过程文档.md` —— 8 个开发阶段实录、11 个问题的定位与修复、关键设计决策与复盘
