@@ -1,10 +1,13 @@
 package com.wms.data.rack.dto;
 
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+
+import java.math.BigDecimal;
 
 /**
  * 创建货架请求体（API-022）。
@@ -18,6 +21,10 @@ import jakarta.validation.constraints.Size;
  * @param y           货架基准平面坐标 y
  * @param orientation 库位排布方向：row 沿 x 递增 / column 沿 y 递增
  * @param generateLocations 是否按列×层批量生成库位（默认 false）
+ * @param capacity    批量生成库位时使用的库位容量（体积口径）；留空取
+ *                    {@code LocationService.DEFAULT_CAPACITY}。
+ *                    与 {@code skus.size} 的单位必须一致，否则容量校验
+ *                    （《需求文档》4.4 约束三）会把全部库位判为放不下
  * @author a
  */
 public record CreateRackRequest(
@@ -50,5 +57,8 @@ public record CreateRackRequest(
         @Pattern(regexp = "^(row|column)$", message = "排布方向只能是 row 或 column")
         String orientation,
 
-        Boolean generateLocations) {
+        Boolean generateLocations,
+
+        @DecimalMin(value = "0", message = "库位容量不能为负数")
+        BigDecimal capacity) {
 }

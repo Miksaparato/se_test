@@ -84,7 +84,7 @@ mvn -s maven-settings.xml test
 # 真实 HTTP 端到端测试（随机端口启动真实服务，验证 401/403/404 鉴权链路）
 mvn -s maven-settings.xml test -Pe2e
 
-# 启动服务（默认 8080）
+# 启动服务（默认 8081）
 mvn -s maven-settings.xml spring-boot:run
 
 # 打包
@@ -95,7 +95,7 @@ java -jar target/wms-sim-backend.jar
 启动成功后自检：
 
 ```bash
-curl -i http://127.0.0.1:8080/api/v1/health
+curl -i http://127.0.0.1:8081/api/v1/health
 ```
 
 - 未携带 Token 时应返回 **401** 与统一响应体（鉴权中间件生效，见 A-B8）；

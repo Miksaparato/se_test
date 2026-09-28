@@ -37,6 +37,7 @@ const form = reactive<RackPayload>({
   y: 0,
   orientation: 'row',
   generateLocations: true,
+  capacity: 100000,
 })
 
 const rules = {
@@ -119,6 +120,7 @@ function handleCreate(): void {
     y: 0,
     orientation: 'row',
     generateLocations: true,
+    capacity: 100000,
   })
   dialogVisible.value = true
 }
@@ -304,6 +306,14 @@ onMounted(load)
             按列×层生成 {{ plannedLocationCount }} 个库位
           </el-checkbox>
         </el-form-item>
+        <el-form-item v-if="editingId === null && form.generateLocations" label="库位容量">
+          <el-input-number v-model="form.capacity" :min="1" :step="1000" controls-position="right" />
+          <div class="wms-muted rack__capacity-tip">
+            体积口径，必须与「货物管理」里的尺寸同单位；留空取默认 100。
+            若货物尺寸按厘米录入（如 30×20×10 = 6000），请填 100000 之类的大值，
+            否则容量校验会把所有库位判为「放不下」。
+          </div>
+        </el-form-item>
         <div class="wms-muted">货架编码与巷道创建后不可修改（已生成库位的编码依赖它们）。</div>
       </el-form>
       <template #footer>
@@ -317,5 +327,10 @@ onMounted(load)
 <style scoped>
 .dialog__sep {
   margin: 0 8px;
+}
+
+.rack__capacity-tip {
+  margin-top: 4px;
+  line-height: 1.5;
 }
 </style>

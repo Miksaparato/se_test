@@ -10,7 +10,7 @@
 ```bash
 cd frontend
 npm install
-npm run dev            # 开发服务器 http://localhost:5173（/api 代理到 8080）
+npm run dev            # 开发服务器 http://localhost:5173（/api 代理到 8081）
 ```
 
 其它命令：
@@ -115,7 +115,7 @@ frontend/
 | 类型检查 | `npm run type-check` | 0 错误 |
 | 生产构建 | `npm run build` | 成功，产物 `dist/`（含各页面按路由懒加载分包） |
 | 静态资源 | 联调脚本 | `index.html` 可访问且含 `#app` 挂载点 |
-| 代理链路 | 联调脚本 | `/api` → 8080 转发正常，匿名访问返回统一 401 结构 |
+| 代理链路 | 联调脚本 | `/api` → 8081 转发正常，匿名访问返回统一 401 结构 |
 | 四角色权限码 | 联调脚本 | 与《接口文档》1.4 权限矩阵逐项一致（**27 项断言全部通过**） |
 | 菜单可见性 | 联调脚本 | 按权限码推导：viewer/operator 不可见系统管理；admin 全部可见 |
 | 越权拦截 | 联调脚本 | viewer 访问用户列表 → 403/40301；operator 创建仓库 → 403 |

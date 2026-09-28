@@ -66,25 +66,27 @@ class WarehouseE2eTest {
 
     /**
      * 启动真实应用。
+     *
+     * <p>用命令行参数（优先级最高）而不是 {@code SpringApplicationBuilder.properties()}：
+     * 后者是「默认属性」，会被 {@code application.yml} 覆盖，用例会连到真实库 {@code wms_sim}。
      */
     @BeforeAll
     static void startApplication() {
         context = new SpringApplicationBuilder(WmsApplication.class)
                 .web(WebApplicationType.SERVLET)
-                .properties(
-                        "server.port=0",
-                        "spring.datasource.url=jdbc:mysql://127.0.0.1:3306/wms_sim_e2e_wh"
+                .run(
+                        "--server.port=0",
+                        "--spring.datasource.url=jdbc:mysql://127.0.0.1:3306/wms_sim_e2e_wh"
                                 + "?createDatabaseIfNotExist=true&useUnicode=true&characterEncoding=utf8"
                                 + "&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC",
-                        "spring.datasource.username=root",
-                        "spring.datasource.password=123456",
-                        "spring.flyway.enabled=true",
-                        "mybatis-plus.configuration.log-impl=org.apache.ibatis.logging.nologging.NoLoggingImpl",
-                        "logging.level.root=WARN")
-                .run();
+                        "--spring.datasource.username=root",
+                        "--spring.datasource.password=123456",
+                        "--spring.flyway.enabled=true",
+                        "--mybatis-plus.configuration.log-impl=org.apache.ibatis.logging.nologging.NoLoggingImpl",
+                        "--logging.level.root=WARN");
 
         baseUrl = "http://127.0.0.1:"
-                + context.getEnvironment().getProperty("local.server.port", Integer.class, 8080);
+                + context.getEnvironment().getProperty("local.server.port", Integer.class, 8081);
         jdbcTemplate = context.getBean(JdbcTemplate.class);
 
         jdbcTemplate.update("INSERT INTO users (id, account, password, name, status) "

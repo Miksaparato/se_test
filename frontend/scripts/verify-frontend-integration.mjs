@@ -3,7 +3,7 @@
  *
  * 目的：在不依赖浏览器的情况下，验证前端所依赖的接口链路与**权限显隐所依据的数据**是否正确：
  *   1. 前端静态资源可访问（vite preview 服务）；
- *   2. 前端 → 后端 的代理链路可用（/api 转发到 8080）；
+ *   2. 前端 → 后端 的代理链路可用（/api 转发到 8081）；
  *   3. 四个角色登录后返回的权限码集合与前端菜单/按钮显隐逻辑一致；
  *   4. 越权访问被后端 403 拦截（前端仅做提示）。
  *
@@ -20,6 +20,10 @@ const MENU_PERMISSIONS = [
   { path: '/data/locations', title: '库位管理', permission: 'sim:view' },
   { path: '/data/skus', title: '货物管理', permission: 'sim:view' },
   { path: '/data/orders', title: '订单管理', permission: 'sim:view' },
+  { path: '/recommend', title: '入库推荐', permission: 'recommend:view' },
+  { path: '/simulation', title: '策略仿真', permission: 'sim:view' },
+  { path: '/compare', title: '方案对比', permission: 'compare:view' },
+  { path: '/config', title: '权重与规则', permission: 'config:manage' },
   { path: '/admin/users', title: '用户管理', permission: 'user:manage' },
   { path: '/admin/roles', title: '角色与权限', permission: 'user:manage' },
 ]

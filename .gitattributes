@@ -1,0 +1,50 @@
+# =============================================================================
+# Git 行尾与文本属性（《代码规范》2.1：源码/配置/SQL/Markdown 统一 UTF-8 无 BOM、行尾 LF）
+#
+# 为什么需要它：Windows 上 core.autocrlf=true 时，仓库内是 LF、工作区是 CRLF，
+# 每次 add 都会刷一屏 "LF will be replaced by CRLF" 警告，且不同成员提交的换行不一致
+# 会让 diff 出现整文件改动。这里按文件类型显式声明，保证跨平台一致。
+# =============================================================================
+
+# 默认：交给 Git 自动判断（首次提交后按内容定），文本文件入库统一为 LF
+* text=auto eol=lf
+
+# ---------- 源码与文档：必须 LF ----------
+*.java    text eol=lf
+*.kt      text eol=lf
+*.xml     text eol=lf
+*.yml     text eol=lf
+*.yaml    text eol=lf
+*.properties text eol=lf
+*.sql     text eol=lf
+*.md      text eol=lf
+*.json    text eol=lf
+*.ts      text eol=lf
+*.vue     text eol=lf
+*.css     text eol=lf
+*.html    text eol=lf
+
+# ---------- Windows 专用脚本：保持 CRLF（PowerShell/cmd 对 LF 兼容性一般） ----------
+*.ps1     text eol=crlf
+*.psm1    text eol=crlf
+*.bat     text eol=crlf
+*.cmd     text eol=crlf
+
+# ---------- 二进制：不做任何转换 ----------
+*.jar     binary
+*.png     binary
+*.jpg     binary
+*.jpeg    binary
+*.gif     binary
+*.ico     binary
+*.woff    binary
+*.woff2   binary
+*.xlsx    binary
+*.xls     binary
+*.pdf     binary
+
+# ---------- 语言统计：把生成目录排除在 GitHub Linguist 之外 ----------
+frontend/dist/**     linguist-generated=true
+frontend/node_modules/** linguist-vendored=true
+backend/target/**    linguist-generated=true
+backend/.mvn-repo/** linguist-vendored=true

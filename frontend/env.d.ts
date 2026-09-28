@@ -6,7 +6,7 @@
  * 负责人：a
  */
 interface ImportMetaEnv {
-  /** 后端接口基地址；默认空表示走 Vite 代理（/api → 8080） */
+  /** 后端接口基地址；默认空表示走 Vite 代理（/api → 8081） */
   readonly VITE_API_BASE_URL?: string
 }
 

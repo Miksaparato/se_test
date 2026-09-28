@@ -3,39 +3,38 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 
 import { getWarehouseLayout, listWarehouses } from '@/api/data'
-import type { Warehouse, WarehouseLayout } from '@/types/data'
+import WarehouseLayout from '@/components/warehouse/WarehouseLayout.vue'
+import type { LayoutLocation, Warehouse, WarehouseLayout as WarehouseLayoutData } from '@/types'
 
 /**
- * 仓库总览页（界面需求 8.2，对应 C-F2）。
+ * 仓库总览页（界面需求 8.2 / C-F2）。
  *
- * 本页由 a 提供页面骨架与数据获取；**平面图可视化由 c 的公共组件 WarehouseLayout 渲染**
- * （C-F1，冻结契约 COM-5）。在 c 交付组件前，这里先用表格展示布局数据，
- * 待组件就绪后只需把下方占位区替换为：
+ * 页面职责只有「取数与展示」：平面图渲染完全交给 c 的公共组件
+ * {@link WarehouseLayout}（C-F1，冻结契约 COM-5），本页不复制任何绘制逻辑。
  *
- * ```html
- * <WarehouseLayout :locations="flatLocations" :exit="layout.exit" />
- * ```
- *
- * 负责人：a（数据与页面骨架）、c（平面图组件）
+ * 负责人：a（页面骨架与数据）、c（平面图组件）
  */
 const loading = ref(false)
 const warehouses = ref<Warehouse[]>([])
-const layout = ref<WarehouseLayout | null>(null)
+const layout = ref<WarehouseLayoutData | null>(null)
+const selectedLayer = ref<number | null>(null)
+const activeLocation = ref<LayoutLocation | null>(null)
 
 const query = reactive({
   warehouseId: undefined as number | undefined,
 })
 
 /** 布局中的库位平铺列表，供平面图组件消费（props: locations）。 */
-const flatLocations = computed(() =>
-  (layout.value?.racks ?? []).flatMap((rack) =>
-    rack.locations.map((location) => ({
-      ...location,
-      rackId: rack.rackId,
-      aisle: rack.aisle,
-    })),
-  ),
+const flatLocations = computed<LayoutLocation[]>(() =>
+  (layout.value?.racks ?? []).flatMap((rack) => rack.locations),
 )
+
+/** 层号可选值。 */
+const layers = computed(() => {
+  const set = new Set<number>()
+  flatLocations.value.forEach((item) => set.add(item.layer))
+  return [...set].sort((a, b) => a - b)
+})
 
 /** 库位状态统计。 */
 const statusSummary = computed(() => {
@@ -59,6 +58,7 @@ async function loadWarehouses(): Promise<void> {
 
 /** 加载并展示所选仓库的布局。 */
 async function loadLayout(): Promise<void> {
+  activeLocation.value = null
   if (!query.warehouseId) {
     layout.value = null
     return
@@ -66,11 +66,36 @@ async function loadLayout(): Promise<void> {
   loading.value = true
   try {
     layout.value = await getWarehouseLayout(query.warehouseId)
+    selectedLayer.value = layers.value[0] ?? null
   } catch {
     layout.value = null
   } finally {
     loading.value = false
   }
+}
+
+/**
+ * 统计某货架下指定状态的库位数。
+ *
+ * 放在脚本侧而不是模板内联：模板表达式里写 TS 类型标注会被模板编译器当作 JS 解析。
+ *
+ * @param locations 货架下的库位列表
+ * @param status 目标状态（free / occupied / disabled）
+ */
+function countByStatus(
+  locations: Array<{ status: string }> | undefined,
+  status: string,
+): number {
+  return (locations ?? []).filter((location) => location.status === status).length
+}
+
+/**
+ * 点击平面图库位，展示详情。
+ *
+ * @param location 被点击的库位
+ */
+function onLocationClick(location: LayoutLocation): void {
+  activeLocation.value = location
 }
 
 onMounted(async () => {
@@ -101,12 +126,23 @@ onMounted(async () => {
             :value="item.id"
           />
         </el-select>
+        <span>楼层：</span>
+        <el-select
+          v-model="selectedLayer"
+          placeholder="全部层"
+          clearable
+          style="width: 140px"
+        >
+          <el-option v-for="l in layers" :key="l" :label="`第 ${l} 层`" :value="l" />
+        </el-select>
         <el-button type="primary" :loading="loading" @click="loadLayout">刷新布局</el-button>
       </div>
 
       <template v-if="layout">
         <el-descriptions :column="4" border size="small">
-          <el-descriptions-item label="仓库">{{ layout.name }}（{{ layout.code }}）</el-descriptions-item>
+          <el-descriptions-item label="仓库">
+            {{ layout.name }}（{{ layout.code }}）
+          </el-descriptions-item>
           <el-descriptions-item label="尺寸">
             {{ layout.length ?? '-' }} × {{ layout.width ?? '-' }} × {{ layout.height ?? '-' }}
           </el-descriptions-item>
@@ -126,16 +162,49 @@ onMounted(async () => {
           </el-descriptions-item>
         </el-descriptions>
 
-        <el-alert
-          class="overview__notice"
-          type="info"
-          :closable="false"
-          show-icon
-          title="平面图可视化由公共组件 WarehouseLayout（C-F1，负责人 c）提供"
-          description="本页已按 API-021 取到布局数据（货架与库位坐标、状态、出库口），组件就绪后直接传入 locations / exit 即可渲染。"
-        />
+        <el-divider content-position="left">仓库平面图（C-F1 公共组件）</el-divider>
 
-        <el-table :data="layout.racks" border stripe size="small" class="overview__table">
+        <el-row :gutter="16">
+          <el-col :span="18">
+            <WarehouseLayout
+              :locations="flatLocations"
+              :exit="layout.exit"
+              :layer="selectedLayer"
+              :height="440"
+              @location-click="onLocationClick"
+            />
+          </el-col>
+          <el-col :span="6">
+            <el-card shadow="never" class="overview__detail">
+              <template #header>库位详情</template>
+              <el-empty v-if="!activeLocation" description="点击平面图上的库位查看详情" :image-size="60" />
+              <el-descriptions v-else :column="1" border size="small">
+                <el-descriptions-item label="编码">{{ activeLocation.code }}</el-descriptions-item>
+                <el-descriptions-item label="坐标">
+                  ({{ activeLocation.x }}, {{ activeLocation.y }})
+                </el-descriptions-item>
+                <el-descriptions-item label="层号">第 {{ activeLocation.layer }} 层</el-descriptions-item>
+                <el-descriptions-item label="状态">
+                  <el-tag
+                    size="small"
+                    :type="activeLocation.status === 'free' ? 'success' : activeLocation.status === 'occupied' ? 'warning' : 'info'"
+                  >
+                    {{ activeLocation.status }}
+                  </el-tag>
+                </el-descriptions-item>
+                <el-descriptions-item label="容量">{{ activeLocation.capacity }}</el-descriptions-item>
+                <el-descriptions-item label="距出库口">
+                  {{ Math.abs(activeLocation.x - layout.exit.x) + Math.abs(activeLocation.y - layout.exit.y) }}
+                  （曼哈顿）
+                </el-descriptions-item>
+              </el-descriptions>
+            </el-card>
+          </el-col>
+        </el-row>
+
+        <el-divider content-position="left">货架明细</el-divider>
+
+        <el-table :data="layout.racks" border stripe size="small">
           <el-table-column prop="rackId" label="货架 id" width="90" />
           <el-table-column prop="code" label="货架编码" width="110" />
           <el-table-column prop="aisle" label="巷道" width="80" />
@@ -152,10 +221,10 @@ onMounted(async () => {
           <el-table-column label="状态分布">
             <template #default="{ row }">
               <el-tag type="success" size="small">
-                空闲 {{ row.locations.filter((l: { status: string }) => l.status === 'free').length }}
+                空闲 {{ countByStatus(row.locations, 'free') }}
               </el-tag>
               <el-tag type="warning" size="small" class="overview__tag">
-                占用 {{ row.locations.filter((l: { status: string }) => l.status === 'occupied').length }}
+                占用 {{ countByStatus(row.locations, 'occupied') }}
               </el-tag>
             </template>
           </el-table-column>
@@ -168,15 +237,12 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.overview__notice {
-  margin: 16px 0;
-}
-
-.overview__table {
-  margin-top: 8px;
-}
-
 .overview__tag {
   margin-left: 6px;
+}
+
+.overview__detail {
+  height: 440px;
+  overflow-y: auto;
 }
 </style>

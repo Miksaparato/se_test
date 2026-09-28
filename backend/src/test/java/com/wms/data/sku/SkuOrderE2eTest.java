@@ -69,22 +69,22 @@ class SkuOrderE2eTest {
      */
     @BeforeAll
     static void startApplication() {
+        // 命令行参数优先级最高；用 SpringApplicationBuilder.properties() 会被 application.yml 覆盖。
         context = new SpringApplicationBuilder(WmsApplication.class)
                 .web(WebApplicationType.SERVLET)
-                .properties(
-                        "server.port=0",
-                        "spring.datasource.url=jdbc:mysql://127.0.0.1:3306/wms_sim_e2e_sku"
+                .run(
+                        "--server.port=0",
+                        "--spring.datasource.url=jdbc:mysql://127.0.0.1:3306/wms_sim_e2e_sku"
                                 + "?createDatabaseIfNotExist=true&useUnicode=true&characterEncoding=utf8"
                                 + "&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC",
-                        "spring.datasource.username=root",
-                        "spring.datasource.password=123456",
-                        "spring.flyway.enabled=true",
-                        "mybatis-plus.configuration.log-impl=org.apache.ibatis.logging.nologging.NoLoggingImpl",
-                        "logging.level.root=WARN")
-                .run();
+                        "--spring.datasource.username=root",
+                        "--spring.datasource.password=123456",
+                        "--spring.flyway.enabled=true",
+                        "--mybatis-plus.configuration.log-impl=org.apache.ibatis.logging.nologging.NoLoggingImpl",
+                        "--logging.level.root=WARN");
 
         baseUrl = "http://127.0.0.1:"
-                + context.getEnvironment().getProperty("local.server.port", Integer.class, 8080);
+                + context.getEnvironment().getProperty("local.server.port", Integer.class, 8081);
         jdbcTemplate = context.getBean(JdbcTemplate.class);
 
         jdbcTemplate.update("INSERT INTO users (id, account, password, name, status) "

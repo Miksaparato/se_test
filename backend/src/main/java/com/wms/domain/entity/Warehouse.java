@@ -274,4 +274,23 @@ public class Warehouse {
         this.updatedAt = updatedAt;
     }
 
+    /**
+     * 便捷构造：用于单元测试与演示数据（不含 code 等非空列，仅供内存场景使用）。
+     *
+     * @param id    主键
+     * @param name  仓库名称
+     * @param exitX 出库口坐标 x
+     * @param exitY 出库口坐标 y
+     */
+    public Warehouse(Long id, String name, int exitX, int exitY) {
+        this.id = id;
+        this.name = name;
+        this.exitX = exitX;
+        this.exitY = exitY;
+    }
+
+    /** MyBatis-Plus 反射实例化所需的无参构造。 */
+    public Warehouse() {
+    }
+
 }

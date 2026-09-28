@@ -149,12 +149,16 @@
                 <configuration>
                     <!-- e2e 标记的真实 HTTP 测试需绑定端口，默认不跑；用 -Pe2e 单独执行 -->
                     <excludedGroups>e2e</excludedGroups>
+                    <!--
+                      受限（沙箱）环境不允许 JVM 派生外部进程，Mockito(ByteBuddy) 默认的
+                      「派生外部进程自附加」会失败并报
+                      "Could not self-attach to current VM using external process"。
+                      该开关必须作为**启动参数**传入（JDK 在 sun.tools.attach 初始化时读取并缓存），
+                      用 systemPropertyVariables 在进程起来之后再设置是无效的。
+                    -->
+                    <argLine>-Djdk.attach.allowAttachSelf=true</argLine>
                     <systemPropertyVariables>
-                        <!--
-                          沙箱/受限环境下 JVM 不允许 Mockito(ByteBuddy) 派生外部进程自附加，
-                          需要开启 ByteBuddy 的实验性自附加开关，否则测试启动即报
-                          "Could not self-attach to current VM using external process"。
-                        -->
+                        <!-- ByteBuddy 对较新 JDK 的实验性支持开关 -->
                         <net.bytebuddy.experimental>true</net.bytebuddy.experimental>
                     </systemPropertyVariables>
                 </configuration>

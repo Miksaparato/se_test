@@ -38,6 +38,8 @@ const menuGroups = computed(() => {
   const groups = [
     { title: '概览', items: pick('/overview') },
     { title: '基础数据', items: pick('/data/') },
+    { title: '智能决策', items: [...pick('/recommend'), ...pick('/simulation'), ...pick('/compare')] },
+    { title: '系统配置', items: pick('/config') },
     { title: '系统管理', items: pick('/admin/') },
   ]
   return groups.filter((group) => group.items.length > 0)

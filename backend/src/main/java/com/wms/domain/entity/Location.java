@@ -57,6 +57,17 @@ public class Location {
     /** 当前占用货物 id，status=occupied 时必须非空。 */
     private Long occupiedSkuId;
 
+    /**
+     * 分区品类（<b>非表字段</b>）。
+     *
+     * <p>{@code locations} 表没有分区列：本字段由所属货架的 {@code racks.aisle} 经
+     * 「品类 ↔ 巷道」映射（{@code wms.zone.aisle-category}，可配置）在查询后派生填充，
+     * 供推荐引擎的 {@code S_other} 品类匹配与仿真引擎的「分区存储」策略消费
+     * （对应 FR-2.3「权重与规则可配置」）。
+     */
+    @TableField(exist = false)
+    private String category;
+
     /** 创建时间(UTC)，插入时自动填充。 */
     @TableField(value = "created_at", fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
@@ -279,6 +290,66 @@ public class Location {
      */
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    /**
+     * 获取分区品类（非表字段，由货架巷道派生）。
+     *
+     * @return 分区品类，未配置映射时为 null
+     */
+    public String getCategory() {
+        return category;
+    }
+
+    /**
+     * 设置分区品类（非表字段，由货架巷道派生）。
+     *
+     * @param category 分区品类
+     */
+    public void setCategory(String category) {
+        this.category = category;
+    }
+
+    /**
+     * 库位是否空闲（推荐引擎与仿真引擎只消费空闲库位）。
+     *
+     * @return status 为 {@code free} 时返回 true
+     */
+    public boolean isFree() {
+        return "free".equals(status);
+    }
+
+    /**
+     * 库位是否停用（停用库位不参与推荐与仿真）。
+     *
+     * @return status 为 {@code disabled} 时返回 true
+     */
+    public boolean isDisabled() {
+        return "disabled".equals(status);
+    }
+
+    /**
+     * 便捷构造：用于单元测试与演示数据（状态默认 {@code free}）。
+     *
+     * @param id          主键
+     * @param code        库位编码
+     * @param x           平面坐标 x
+     * @param y           平面坐标 y
+     * @param layer       层号
+     * @param warehouseId 所属仓库 id
+     */
+    public Location(Long id, String code, int x, int y, int layer, Long warehouseId) {
+        this.id = id;
+        this.code = code;
+        this.x = x;
+        this.y = y;
+        this.layer = layer;
+        this.warehouseId = warehouseId;
+        this.status = "free";
+    }
+
+    /** MyBatis-Plus 反射实例化所需的无参构造。 */
+    public Location() {
     }
 
 }

@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -102,7 +103,7 @@ public class RackService {
 
         long locationCount = 0L;
         if (Boolean.TRUE.equals(request.generateLocations())) {
-            locationCount = generateLocations(entity);
+            locationCount = generateLocations(entity, request.capacity());
         }
         log.info("创建货架成功 id={} code={} 列={} 层={} 生成库位={}",
                 entity.getId(), entity.getCode(), entity.getColumnCount(), entity.getLayerCount(),
@@ -196,11 +197,13 @@ public class RackService {
     /**
      * 按货架批量生成库位：编码「巷道-货架序号-列-层」，逐条 insert（同一事务，NFR-1 下万级库位亦在秒级）。
      *
-     * @param rack 货架实体
+     * @param rack     货架实体
+     * @param capacity 库位容量（体积口径）；为 null 时取 {@link LocationService#DEFAULT_CAPACITY}
      * @return 生成数量
      */
-    private long generateLocations(Rack rack) {
+    private long generateLocations(Rack rack, BigDecimal capacity) {
         String rackSeq = extractRackSequence(rack.getCode());
+        BigDecimal effectiveCapacity = capacity == null ? LocationService.DEFAULT_CAPACITY : capacity;
         List<Location> batch = new ArrayList<>();
         for (int column = 1; column <= rack.getColumnCount(); column++) {
             for (int layer = 1; layer <= rack.getLayerCount(); layer++) {
@@ -213,7 +216,7 @@ public class RackService {
                 location.setY(resolveY(rack, column));
                 location.setLayer(layer);
                 location.setStatus(LocationService.STATUS_FREE);
-                location.setCapacity(LocationService.DEFAULT_CAPACITY);
+                location.setCapacity(effectiveCapacity);
                 batch.add(location);
             }
         }

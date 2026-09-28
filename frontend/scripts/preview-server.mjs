@@ -3,12 +3,13 @@
  *
  * 与 `vite preview` 等价地做两件事：
  *   1. 提供 `dist/` 静态资源（SPA：未匹配路径回落 index.html）；
- *   2. 把 `/api` 代理到后端 8080，复现开发环境的同源调用链路。
+ *   2. 把 `/api` 代理到后端，复现开发环境的同源调用链路。
  *
  * 之所以不直接用 `vite preview`：受限环境下 Vite 需要让 esbuild 派生服务子进程，
  * 会因进程限制失败；本脚本只用 Node 内置能力，可在任何环境稳定运行。
  *
  * 用法：node scripts/preview-server.mjs [port] [backendUrl]
+ *      后端地址默认 http://127.0.0.1:8081，须与后端 server.port 一致。
  */
 
 import { createReadStream, existsSync, statSync } from 'node:fs'
@@ -17,7 +18,7 @@ import { extname, join, normalize } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const PORT = Number(process.argv[2] ?? 4173)
-const BACKEND = process.argv[3] ?? 'http://127.0.0.1:8080'
+const BACKEND = process.argv[3] ?? 'http://127.0.0.1:8081'
 const DIST = fileURLToPath(new URL('../dist', import.meta.url))
 
 /** 扩展名 → Content-Type。 */
